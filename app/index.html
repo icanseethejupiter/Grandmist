@@ -181,6 +181,19 @@
   .eng-ev { display: inline-block; min-width: 60px; font-weight: 700; }
   .eng-mv { cursor: pointer; padding: 0 2px; border-radius: 3px; }
   .eng-mv:hover { background: var(--hover); color: var(--accent); }
+  #rvLevel { font-size: 12px; padding: 2px 4px; }
+  body.tab-review .tree-panel { height: 58%; }
+  .rv-card { border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 6px; padding: 8px 10px; margin: 6px 0; background: var(--panel); }
+  .rv-card.v-blunder { border-left-color: #ff5c6c; } .rv-card.v-mistake { border-left-color: #ff9f43; } .rv-card.v-inaccuracy { border-left-color: #f5d547; }
+  .rv-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .rv-move { font: 700 14px var(--mono); cursor: pointer; } .rv-move:hover { color: var(--accent); }
+  .rv-badge { font-size: 11px; padding: 1px 6px; border-radius: 10px; background: var(--hover); color: var(--muted); }
+  .rv-text { font-size: 13px; line-height: 1.5; margin: 2px 0 4px; }
+  .rv-stats { font: 11px var(--mono); color: var(--muted); margin: 2px 0; }
+  .rv-take { font-size: 12px; color: var(--cmt); margin-top: 4px; }
+  .rv-src { margin: 4px 0 8px; }
+  .mv.km::after { content: "●"; font-size: 9px; margin-left: 2px; vertical-align: super; color: var(--accent); }
+  .mv.km-blunder::after { color: #ff5c6c; } .mv.km-mistake::after { color: #ff9f43; } .mv.km-inaccuracy::after { color: #f5d547; }
   .io-grid { display: grid; grid-template-columns: 1fr 1.6fr .8fr; gap: 10px; margin: 12px 0 8px; min-width: min(520px, 80vw); }
   .io-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
   #ioStatus { min-height: 18px; margin-bottom: 8px; font-family: var(--mono); }
@@ -304,9 +317,12 @@
 
   <div class="tree-panel">
     <div class="panel-title">
-      <button class="ptab on" data-tab="engine" data-i18n="engine">Engine</button><button class="ptab" data-tab="tree" data-i18n="opening_tree">Opening tree</button><span class="sp"></span>
+      <button class="ptab on" data-tab="engine" data-i18n="engine">Engine</button><button class="ptab" data-tab="tree" data-i18n="opening_tree">Opening tree</button><button class="ptab" id="reviewTab" data-tab="review" data-i18n="review" hidden>Review</button><span class="sp"></span>
       <span class="tab-tools" data-for="engine">
         <select id="engSel"></select><button id="engAdd" class="small-btn" data-i18n-title="eng_add">+</button><button id="engRemove" class="small-btn" data-i18n-title="eng_remove">−</button><button id="engGo" class="small-btn primary">▶</button>
+      </span>
+      <span class="tab-tools" data-for="review" hidden>
+        <select id="rvLevel" data-i18n-title="rv_level_tip"></select><button id="rvGo" class="small-btn primary" data-i18n="rv_go">Review game</button>
       </span>
       <span class="tab-tools" data-for="tree" hidden>
         <label><input type="checkbox" id="treeVars"> <span data-i18n="include_vars">Include variations</span></label>
@@ -314,6 +330,7 @@
       </span>
     </div>
     <div class="tree-body" data-pane="engine"><div id="engHead" class="eng-head"></div><div id="engLines"></div></div>
+    <div class="tree-body" data-pane="review" hidden><div id="rvBody"></div></div>
     <div class="tree-body" data-pane="tree" hidden><div id="tree"></div><div id="treeRecs" class="tree-recs"></div></div>
   </div>
 </section>
@@ -1109,7 +1126,8 @@ function renderNotation() {
     const num = ps.turn === 'w' ? ps.full + '. ' : force ? ps.full + '… ' : '';
     const moveNags = node.nags.filter(n => n <= 9).map(n => NAG_TEXT[n] || '').join('');
     const posNags = node.nags.filter(n => n > 9).map(n => NAG_TEXT[n] || '').join(' ');
-    const sp = mk('span', 'mv' + (main ? ' main' : '') + (node === cur ? ' cur' : ''), num + node.san + moveNags + (posNags ? ' ' + posNags : ''));
+    const verdict = reviewVerdict(node);
+    const sp = mk('span', 'mv' + (main ? ' main' : '') + (node === cur ? ' cur' : '') + (verdict ? ' km km-' + verdict : ''), num + node.san + moveNags + (posNags ? ' ' + posNags : ''));
     sp._node = node;
     if (node === cur) curEl = sp;
     container.append(sp, ' ');
@@ -1287,6 +1305,7 @@ function renderTree() {
 
 function renderAll() {
   renderBoard(); renderNotation(); renderComment(); renderInfo(); renderLibrary(); renderTree();
+  if (typeof renderReview === "function") renderReview();
 }
 
 // ===================== Actions =====================
@@ -1845,6 +1864,8 @@ const engineFen = st => fenKey(st) + ' ' + st.half + ' ' + st.full;
 const fmtN = n => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'k' : String(n);
 
 function setTab(tab) {
+  if (tab === 'review' && !reviewAvailable()) tab = 'engine';
+  document.body.classList.toggle('tab-review', tab === 'review');
   if (lib.prefs.tab !== tab) { lib.prefs.tab = tab; scheduleSave(); }
   for (const b of document.querySelectorAll('.ptab')) b.classList.toggle('on', b.dataset.tab === tab);
   for (const el of document.querySelectorAll('[data-pane]')) el.hidden = el.dataset.pane !== tab;
@@ -2099,6 +2120,99 @@ $('#ioGo').onclick = importOnline;
 $('#ioUser').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); importOnline(); } });
 $('#onlineDlg').addEventListener('close', () => { if (IO.busy) IO.cancel = true; });
 
+// ===================== Game review (only when the optional core is installed) =====================
+const RV = { busy: false };
+const reviewAvailable = () => !!(Backend.core && Backend.core.available && (Backend.core.capabilities || []).includes('review'));
+function mainlineNodes(r) { const out = []; let n = r.root; while (n.children.length) { n = n.children[0]; out.push(n); } return out; }
+
+function renderReviewTab() {
+  $('#reviewTab').hidden = !reviewAvailable();
+  const sel = $('#rvLevel');
+  if (!sel.options.length) for (let r = 1100; r <= 1900; r += 100) sel.append(new Option(r, r));
+  sel.value = lib.prefs.rvLevel || 1500;
+  renderReview();
+}
+
+function reviewMessage(msg) {
+  const box = $('#rvBody');
+  box.innerHTML = '<div class="empty"></div>';
+  box.firstChild.textContent = msg;
+}
+
+// The review belongs to the record it was made for; it is stale once the main line changes
+function reviewOf(r) {
+  const v = r && r._review;
+  if (!v) return null;
+  const nodes = mainlineNodes(r);
+  return v.nodes.every((n, i) => nodes[i] === n) ? v : null;
+}
+function reviewVerdict(node) {
+  const v = reviewOf(rec);
+  if (!v) return null;
+  const i = v.nodes.indexOf(node);
+  const m = i < 0 ? null : v.data.key_moments.find(k => k.ply === i + 1);
+  return m ? m.verdict : null;
+}
+
+function renderReview() {
+  if (!reviewAvailable() || !rec) return;
+  if (RV.busy) return;
+  const v = reviewOf(rec), box = $('#rvBody');
+  if (!v) { reviewMessage(rec._review ? t('rv_stale') : t('rv_intro')); return; }
+  box.innerHTML = '';
+  const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  if (!v.data.key_moments.length) box.append(mk('div', 'empty', t('rv_none')));
+  for (const m of v.data.key_moments) {
+    const card = mk('div', 'rv-card v-' + m.verdict);
+    const head = mk('div', 'rv-head');
+    const mv = mk('span', 'rv-move', m.move);
+    mv.onclick = () => { setView('board'); goTo(v.nodes[m.ply - 1]); };
+    head.append(mv, mk('span', 'rv-badge', t('v_' + m.verdict)));
+    card.append(head);
+    if (m.comment) card.append(mk('div', 'rv-text', m.comment));
+    const curve = Object.entries(m.human_chance_by_rating_pct || {}).map(([r, x]) => `${r}: ${x.best}%`).join(' · ');
+    card.append(mk('div', 'rv-stats', t('rv_chances', { a: m.expected_score_before_pct, b: m.expected_score_after_pct }) + ' · ' +
+      t('rv_found', { p: m.human_chance_to_play_best_pct, r: v.data.model_rating }) + (curve ? ' (' + curve + ')' : '')));
+    card.append(mk('div', 'rv-stats', t('rv_engine') + ': ' + m.engine_line));
+    if (m.takeaway) card.append(mk('div', 'rv-take', '💡 ' + m.takeaway));
+    box.append(card);
+  }
+  box.append(mk('div', 'hint rv-src', t(v.data.explanation_source === 'ai' ? 'rv_src_ai' : 'rv_src_rules')));
+}
+
+async function startReview() {
+  if (RV.busy || !rec || !reviewAvailable()) return;
+  const r = rec, nodes = mainlineNodes(r);
+  if (!nodes.length) { reviewMessage(t('rv_need_moves')); return; }
+  lib.prefs.rvLevel = +$('#rvLevel').value;
+  scheduleSave();
+  const h = r.headers;
+  const res = await Backend.api.core_job_start('review', {
+    moves: nodes.map(n => n.san), start_fen: r.startFEN, rating: lib.prefs.rvLevel, language: I18N.code,
+    headers: { Title: h.Title, White: h.White, Black: h.Black, Event: h.Event, Date: h.Date, Result: h.Result },
+  });
+  if (!res.ok) { reviewMessage(t('rv_failed', { error: res.error })); return; }
+  RV.busy = true;
+  $('#rvGo').disabled = true;
+  reviewMessage(t('rv_starting'));
+  const tick = async () => {
+    const j = await Backend.api.core_job_poll(res.id);
+    if (!j.done) {
+      if (rec === r && j.progress > 0) reviewMessage(t('rv_running', { pct: Math.round(j.progress * 100) }));
+      setTimeout(tick, 500);
+      return;
+    }
+    RV.busy = false;
+    $('#rvGo').disabled = false;
+    if (!j.result.ok) { reviewMessage(t('rv_failed', { error: j.result.error })); return; }
+    r._review = { data: j.result.result, nodes };
+    if (rec === r) { renderReview(); renderNotation(); }
+    toast(t('rv_done'));
+  };
+  tick();
+}
+$('#rvGo').onclick = startReview;
+
 // ===================== Startup =====================
 const SAMPLE = `[Title "Sample: Italian Game"]
 [Category "Openings/Open Games"]
@@ -2116,6 +2230,7 @@ const SAMPLE = `[Title "Sample: Italian Game"]
   $('#treeScope').value = lib.prefs.treeScope || 'all';
   $('#gDepth').value = lib.prefs.gDepth || 10;
   $('#gScope').value = lib.prefs.gScope || 'record';
+  renderReviewTab();
   setTab(lib.prefs.tab || 'engine');
   renderEngineList();
   setView(lib.prefs.view || 'board');

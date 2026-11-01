@@ -230,5 +230,26 @@
     "other": "{n} games skipped (variants or unreadable)"
   },
   "as_white": "As White",
-  "as_black": "As Black"
+  "as_black": "As Black",
+  "review": "Review",
+  "rv_go": "▶ Review game",
+  "rv_level_tip": "Player level used to judge how hard each move was",
+  "rv_intro": "Review finds the moments that decided this game, explains them, and shows how hard the right move was for a player of the chosen level. It takes about a minute.",
+  "rv_need_moves": "This record has no moves yet.",
+  "rv_starting": "Starting the engines…",
+  "rv_running": "Analysing… {pct}%",
+  "rv_done": "Review ready",
+  "rv_failed": "Review failed: {error}",
+  "rv_none": "No key moments found — a clean game.",
+  "rv_stale": "The moves have changed since the last review. Run it again.",
+  "v_blunder": "Blunder",
+  "v_mistake": "Mistake",
+  "v_inaccuracy": "Inaccuracy",
+  "v_only_move": "Only move",
+  "v_strong": "Strong move",
+  "rv_chances": "Winning chances {a}% → {b}%",
+  "rv_found": "best move found by {p}% of {r} players",
+  "rv_engine": "Engine",
+  "rv_src_ai": "Explanations written by AI.",
+  "rv_src_rules": "Offline explanations (AI server not connected)."
 }

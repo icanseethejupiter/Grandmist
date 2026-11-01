@@ -220,5 +220,26 @@
     "other": "跳过了 {n} 盘（变体棋或无法读取）"
   },
   "as_white": "执白",
-  "as_black": "执黑"
+  "as_black": "执黑",
+  "review": "复盘",
+  "rv_go": "▶ 复盘这盘棋",
+  "rv_level_tip": "用哪个等级分的棋手来衡量每步棋的难度",
+  "rv_intro": "复盘会找出决定这盘棋走向的关键时刻并加以讲解，同时告诉你：对所选等级的棋手来说，找到正确着法有多难。大约需要一分钟。",
+  "rv_need_moves": "这份棋谱还没有着法。",
+  "rv_starting": "正在启动引擎…",
+  "rv_running": "分析中… {pct}%",
+  "rv_done": "复盘完成",
+  "rv_failed": "复盘失败：{error}",
+  "rv_none": "没有找到关键时刻，这是一盘很干净的棋。",
+  "rv_stale": "上次复盘之后着法有改动，请重新复盘。",
+  "v_blunder": "败着",
+  "v_mistake": "错着",
+  "v_inaccuracy": "不精确",
+  "v_only_move": "唯一着法",
+  "v_strong": "好棋",
+  "rv_chances": "胜率 {a}% → {b}%",
+  "rv_found": "{r} 分棋手中有 {p}% 能找到最佳着法",
+  "rv_engine": "引擎",
+  "rv_src_ai": "讲解由 AI 撰写。",
+  "rv_src_rules": "离线讲解（未连接 AI 服务器）。"
 }

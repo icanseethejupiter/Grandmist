@@ -16,6 +16,7 @@ import sys
 import threading
 import urllib.error
 import urllib.request
+import uuid
 
 import webview
 
@@ -249,6 +250,7 @@ def load_core():
 
 
 CORE = load_core()
+JOBS = {}
 
 
 class Api:
@@ -363,6 +365,31 @@ class Api:
         if CORE is None:
             return {'ok': False, 'error': 'core not available'}
         return CORE.call(name, args)
+
+    # Long core tasks run in a background thread; the page polls their progress.
+    def core_job_start(self, name, args=None):
+        if CORE is None:
+            return {'ok': False, 'error': 'core not available'}
+        job_id = uuid.uuid4().hex
+        job = JOBS[job_id] = {'done': False, 'progress': 0.0, 'message': '', 'result': None}
+
+        def progress(fraction, message=''):
+            job['progress'], job['message'] = fraction, message
+
+        def run():
+            job['result'] = CORE.call(name, args, progress=progress)
+            job['done'] = True
+
+        threading.Thread(target=run, daemon=True).start()
+        return {'ok': True, 'id': job_id}
+
+    def core_job_poll(self, job_id):
+        job = JOBS.get(job_id)
+        if job is None:
+            return {'done': True, 'result': {'ok': False, 'error': 'unknown job'}}
+        if job['done']:
+            JOBS.pop(job_id, None)
+        return dict(job)
 
     # ---------- engines ----------
     def engine_pick(self):
