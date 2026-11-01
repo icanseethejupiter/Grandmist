@@ -20,7 +20,8 @@ Chess visualization desktop app for Windows, aimed at English-speaking users. Th
 - **Before building any new feature, ask the user whether it belongs to the public shell or the core.** Core work happens only in the private core repository (see its own CLAUDE.md).
 - The shell talks to the core only through `Api.core_info()` / `Api.core_call()` in `main.py`. Without the core, every public feature must keep working.
 - Release builds include the core only as a compiled binary module, never as .py / .pyc.
-- A local pre-push hook checks every push for core content; never bypass it. If it blocks a push, remove the content instead.
+- A local pre-push hook checks every push for core content. **Never use `git push --no-verify`** or any other way around it. If the hook blocks a push, stop and ask the user before doing anything else.
+- The hook is not stored in git: on a new computer or a fresh clone it must be reinstalled from the private core repository (its CLAUDE.md explains how). If the hook is missing, do not push; ask the user.
 - Release notes describe features only, never how they work.
 - No API keys anywhere in this repo or in the exe.
 
