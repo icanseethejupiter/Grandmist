@@ -1,0 +1,32 @@
+# Build output (the exe is published on GitHub Releases)
+build/
+dist/
+*.spec
+
+# User data: never commit game records
+Grandmist Data/
+library.json
+library.json.*
+*.pgn
+*.pgn.*
+*.gm
+
+# Secrets: never commit keys, tokens or certificates
+.env
+.env.*
+*.pem
+*.key
+*.pfx
+*.p12
+*.cer
+*.crt
+id_rsa*
+id_ed25519*
+*secret*
+*token*
+credentials*
+
+# Tools
+.claude/
+__pycache__/
+*.pyc

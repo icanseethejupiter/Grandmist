@@ -1,0 +1,2140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grandmist</title>
+<!-- Piece set: Colin M.L. Burnett (cburnett), CC BY-SA 3.0 -->
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0b0e12; --panel: #11151a; --panel2: #0d1115; --text: #d3dae3; --muted: #6b7785; --border: #1f262e;
+    --accent: #3ddc97; --accent-text: #04140c; --hover: #182028; --cur: #3ddc97; --cur-text: #04140c;
+    --cmt: #6fa8ff; --var: #8693a2; --danger: #ff5c6c; --gl: #2a3440;
+    --light: #b8c2cc; --dark: #6b7a8a; --frame: #07090c;
+    --sel: rgba(61, 220, 151, .45); --last: rgba(61, 220, 151, .28); --dot: rgba(4, 20, 12, .5);
+    --w: #e6edf3; --d: #5d6977; --l: #050607;
+    --mono: "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+    --sq: 64px;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--text); overflow: hidden;
+    font-family: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", sans-serif; font-size: 14px;
+    display: grid; grid-template-columns: 250px minmax(0, 1fr) clamp(340px, 32vw, 540px); }
+  button { font: inherit; padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px;
+    background: var(--panel); color: var(--text); cursor: pointer; }
+  button:hover { background: var(--hover); }
+  button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  input, select, textarea { font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--border);
+    border-radius: 6px; padding: 5px 8px; min-width: 0; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: -1px; }
+  .hint { font-size: 12px; color: var(--muted); font-weight: 400; }
+  .empty { color: var(--muted); padding: 10px 2px; font-size: 13px; }
+
+  /* ---------- Left: library ---------- */
+  .sidebar { display: flex; flex-direction: column; background: var(--panel2); border-right: 1px solid var(--border); min-height: 0; }
+  .brand { padding: 14px 14px 8px; font-size: 18px; font-weight: 700; letter-spacing: 1px; font-family: var(--mono); color: var(--accent); }
+  .brand::before { content: "▍"; }
+  .brand span { font-weight: 400; font-size: 12px; color: var(--muted); margin-left: 6px; letter-spacing: 0; }
+  .lib-actions { display: flex; gap: 6px; padding: 0 12px 8px; }
+  .lib-actions button { flex: 1; padding: 5px 4px; }
+  #search { margin: 0 12px 8px; }
+  #libList { flex: 1; overflow: auto; padding: 0 6px 8px; }
+  .cat { margin-top: 4px; }
+  .cat-head { display: flex; align-items: center; gap: 6px; padding: 5px 8px; font-size: 12px; font-weight: 600;
+    color: var(--muted); cursor: pointer; border-radius: 5px; user-select: none; }
+  .cat-head:hover { background: var(--hover); }
+  .cat-head .arrow { width: 10px; transition: transform .15s; }
+  .cat.closed .arrow { transform: rotate(-90deg); }
+  .cat.closed .cat-body { display: none; }
+  .cat-head .count { margin-left: auto; font-weight: 400; }
+  .rec-item { padding: 6px 8px 6px 22px; border-radius: 6px; cursor: pointer; position: relative; }
+  .rec-item:hover { background: var(--hover); }
+  .rec-item.active { background: var(--accent); color: var(--accent-text); }
+  .rec-item.active .meta { color: inherit; opacity: .8; }
+  .rec-item .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rec-item .meta { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rec-item .more { position: absolute; right: 4px; top: 6px; display: none; padding: 0 6px; border: 0; background: transparent; color: inherit; }
+  .rec-item:hover .more { display: block; }
+  .lib-foot { padding: 8px 12px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
+  .lib-foot a { color: var(--muted); cursor: pointer; text-decoration: underline; }
+  .file-bar { display: flex; gap: 8px; align-items: center; padding: 0 12px 10px; }
+  .doc-name { font-family: var(--mono); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lang-btn { margin-left: auto; padding: 3px 7px; font-family: var(--mono); font-size: 11px; }
+  .doc-name.dirty::after { content: " •"; color: var(--accent); }
+  #menu .kbd { margin-left: auto; padding-left: 24px; color: var(--muted); font-family: var(--mono); font-size: 11px; }
+
+  /* ---------- Center: board ---------- */
+  .center { display: flex; flex-direction: column; align-items: center; padding: 12px 20px; gap: 10px; min-height: 0; overflow: auto; }
+  .board-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .scale { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .scale input { width: 140px; padding: 0; accent-color: var(--accent); }
+  .board-frame { display: grid; grid-template-columns: 18px auto; grid-template-rows: auto 18px; background: var(--frame);
+    padding: 6px 10px 2px 2px; border-radius: 4px; box-shadow: 0 6px 24px rgba(0,0,0,.25); }
+  .ranks { display: flex; flex-direction: column; }
+  .ranks span, .files span { display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 11px; font-weight: 600; font-family: var(--mono); }
+  .ranks span { height: var(--sq); }
+  .files { display: flex; grid-column: 2; }
+  .files span { width: var(--sq); }
+  .board { display: grid; grid-template-columns: repeat(8, var(--sq)); grid-template-rows: repeat(8, var(--sq));
+    user-select: none; touch-action: none; border: 1px solid #000; }
+  .sq { position: relative; }
+  .sq.light { background: var(--light); } .sq.dark { background: var(--dark); }
+  .sq.last::before, .sq.sel::before { content: ""; position: absolute; inset: 0; background: var(--last); }
+  .sq.sel::before { background: var(--sel); }
+  .sq.check::before { content: ""; position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, rgba(255,0,0,1) 0%, rgba(231,0,0,1) 25%, rgba(169,0,0,0) 89%, rgba(158,0,0,0) 100%); }
+  .sq.tgt::after { content: ""; position: absolute; left: 36%; top: 36%; width: 28%; height: 28%; border-radius: 50%; background: var(--dot); z-index: 2; }
+  .sq.cap::after { content: ""; position: absolute; inset: 0; z-index: 2;
+    background: radial-gradient(transparent 0%, transparent 79%, var(--dot) 80%); }
+  .piece { position: absolute; inset: 0; background-size: 100% 100%; z-index: 1; cursor: grab; }
+  .piece.dragging { opacity: .3; }
+  .ghost { position: fixed; pointer-events: none; z-index: 1000; background-size: 100% 100%; cursor: grabbing; }
+  .nav { display: flex; gap: 6px; }
+  .nav button { min-width: 44px; }
+  #status { font-size: 13px; color: var(--muted); min-height: 18px; text-align: center; }
+  #status b { color: var(--text); font-weight: 600; }
+
+  /* ---------- Right: notation / comments / opening tree ---------- */
+  .right { display: flex; flex-direction: column; min-height: 0; border-left: 1px solid var(--border); background: var(--panel); }
+  .rec-head { padding: 12px 14px 8px; display: flex; flex-direction: column; gap: 6px; border-bottom: 1px solid var(--border); }
+  .title-input { font-size: 17px; font-weight: 600; border-color: transparent; background: transparent; padding: 4px 6px; }
+  .title-input:hover { border-color: var(--border); }
+  .head-row { display: flex; gap: 6px; align-items: center; }
+  .head-row input { flex: 1; }
+  details summary { cursor: pointer; color: var(--muted); font-size: 12px; padding: 2px 0; user-select: none; }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; padding-top: 6px; }
+  .info-grid label { display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: var(--muted); }
+  .info-grid .full { grid-column: 1 / -1; }
+  .panel-title { display: flex; align-items: center; gap: 8px; padding: 8px 14px 6px; font-weight: 600; font-size: 13px; }
+  .panel-title .sp { flex: 1; }
+  .panel-title label { font-weight: 400; font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 4px; }
+  .panel-title select { font-size: 12px; padding: 2px 4px; }
+  .notation-panel { flex: 1 1 auto; min-height: 140px; display: flex; flex-direction: column; }
+  .notation { flex: 1; overflow: auto; padding: 4px 14px 14px; line-height: 1.8; font-size: 13.5px; font-family: var(--mono); }
+  .panel-title { text-transform: uppercase; letter-spacing: 1.5px; font-size: 12px; color: var(--muted); }
+  .panel-title::before { content: "//"; color: var(--accent); font-family: var(--mono); letter-spacing: 0; }
+
+  /* ---------- Tree graph ---------- */
+  .view-tabs { display: flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .view-tabs button { border: 0; border-radius: 0; background: transparent; color: var(--muted); font-family: var(--mono); }
+  .view-tabs button.on { background: var(--accent); color: var(--accent-text); }
+  body.graph-mode .board-frame, body.graph-mode .scale, body.graph-mode #btnFit, body.graph-mode #btnFlip { display: none; }
+  #graphWrap { display: none; flex: 1; width: 100%; min-height: 0; flex-direction: column; border: 1px solid var(--border); border-radius: 8px;
+    background: radial-gradient(circle at 1px 1px, var(--border) 1px, transparent 0) 0 0 / 18px 18px, var(--panel2); }
+  body.graph-mode #graphWrap { display: flex; }
+  .graph-tools { display: flex; gap: 6px; align-items: center; padding: 6px 10px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--muted); font-family: var(--mono); }
+  .graph-tools select { font-size: 12px; padding: 2px 4px; }
+  .graph-tools button { padding: 1px 9px; }
+  #graph { flex: 1; overflow: auto; }
+  #graph svg { display: block; }
+  .g-link { fill: none; stroke: var(--gl); }
+  .g-link.on { stroke: var(--accent); }
+  .g-node { cursor: pointer; }
+  .g-node rect { fill: var(--panel); stroke: #33404d; }
+  .g-node.b rect { fill: #050607; }
+  .g-node text { fill: var(--text); font-family: var(--mono); }
+  .g-node:hover rect, .g-node.on rect { stroke: var(--accent); }
+  .g-node.cur rect { fill: var(--accent); stroke: var(--accent); }
+  .g-node.cur text { fill: var(--accent-text); font-weight: 700; }
+  .g-node .g-more { fill: var(--muted); }
+  .g-node.main text { font-weight: 700; }
+  .g-node .g-dot { fill: var(--cmt); stroke: none; }
+  #peek { position: fixed; display: none; z-index: 1500; border: 1px solid var(--accent); background: var(--panel); padding: 5px;
+    border-radius: 6px; box-shadow: 0 10px 34px rgba(0,0,0,.7); pointer-events: none; }
+  #peek .mb { display: grid; grid-template-columns: repeat(8, 22px); grid-template-rows: repeat(8, 22px); }
+  #peek .mb div { background-size: 100% 100%; }
+  #peek .cap { font: 11px var(--mono); color: var(--muted); padding: 5px 2px 0; max-width: 176px; }
+  .notation .line { display: block; }
+  .mv { padding: 1px 3px; border-radius: 4px; cursor: pointer; white-space: nowrap; }
+  .mv:hover { background: var(--hover); }
+  .mv.main { font-weight: 600; }
+  .mv.cur { background: var(--cur); color: var(--cur-text); }
+  .cmt { color: var(--cmt); margin: 0 4px; }
+  .notation > .cmt.intro { display: block; margin: 2px 0 6px; }
+  .var { display: block; margin: 2px 0 4px 6px; padding-left: 10px; border-left: 2px solid var(--border); color: var(--var); font-size: 13.5px; }
+  .var .var { margin-left: 2px; }
+  .var-inline { color: var(--var); }
+  .comment-panel { border-top: 1px solid var(--border); padding: 8px 14px 10px; display: flex; flex-direction: column; gap: 6px; }
+  .nag-bar { display: flex; gap: 3px; flex-wrap: wrap; align-items: center; }
+  .nag-bar button { padding: 1px 6px; font-size: 12px; min-width: 28px; }
+  .nag-bar button.on { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  .nag-bar .lbl { font-size: 12px; color: var(--muted); margin-right: 4px; }
+  .nag-bar .gap { width: 8px; }
+  #comment { resize: vertical; min-height: 54px; height: 64px; font-size: 13px; }
+  .tree-panel { flex: 0 0 auto; height: 36%; min-height: 160px; border-top: 1px solid var(--border); display: flex; flex-direction: column; background: var(--panel2); }
+  .tree-body { flex: 1; overflow: auto; padding: 0 14px 10px; }
+  .ptab { border: 0; background: transparent; padding: 2px 6px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; font-size: 12px; }
+  .ptab:hover { background: transparent; color: var(--text); }
+  .ptab.on { color: var(--accent); }
+  .tab-tools { display: flex; gap: 4px; align-items: center; }
+  .tab-tools[hidden] { display: none; }
+  .small-btn { padding: 1px 8px; font-size: 12px; }
+  #engSel { font-size: 12px; padding: 2px 4px; max-width: 150px; }
+  .eng-head { display: flex; align-items: center; gap: 10px; padding: 2px 0 8px; }
+  .eng-head:empty { display: none; }
+  .eng-score { font: 700 20px var(--mono); color: var(--accent); min-width: 72px; }
+  .eng-bar { flex: 1; height: 12px; }
+  .eng-stats { font: 11px var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 45%; }
+  .eng-line { font-family: var(--mono); font-size: 13px; padding: 3px 0; border-top: 1px solid var(--border); line-height: 1.6; }
+  .eng-ev { display: inline-block; min-width: 60px; font-weight: 700; }
+  .eng-mv { cursor: pointer; padding: 0 2px; border-radius: 3px; }
+  .eng-mv:hover { background: var(--hover); color: var(--accent); }
+  .io-grid { display: grid; grid-template-columns: 1fr 1.6fr .8fr; gap: 10px; margin: 12px 0 8px; min-width: min(520px, 80vw); }
+  .io-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+  #ioStatus { min-height: 18px; margin-bottom: 8px; font-family: var(--mono); }
+  .tree-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .tree-table th { text-align: left; font-weight: 500; color: var(--muted); font-size: 11px; padding: 2px 6px; position: sticky; top: 0; background: var(--panel2); }
+  .tree-table td { padding: 3px 6px; border-top: 1px solid var(--border); }
+  .tree-table tr.row { cursor: pointer; }
+  .tree-table tr.row:hover td { background: var(--hover); }
+  .tree-table .san { font-weight: 600; }
+  .tree-table .inrec::after { content: " ●"; color: var(--accent); font-size: 9px; vertical-align: middle; }
+  .tree-table .num { text-align: right; width: 48px; }
+  .bar { display: flex; height: 14px; border-radius: 3px; overflow: hidden; border: 1px solid var(--border); min-width: 90px; }
+  .bar span { display: block; height: 100%; }
+  .bar .w { background: var(--w); } .bar .d { background: var(--d); } .bar .l { background: var(--l); }
+  .tree-recs { margin-top: 8px; font-size: 12px; color: var(--muted); }
+  .tree-recs a { display: inline-block; margin: 2px 8px 2px 0; color: var(--accent); cursor: pointer; }
+
+  /* ---------- Popups ---------- */
+  #menu { position: fixed; z-index: 2000; background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+    box-shadow: 0 8px 28px rgba(0,0,0,.25); padding: 4px; min-width: 170px; display: none; }
+  #menu button { display: flex; width: 100%; text-align: left; border: 0; background: transparent; padding: 6px 10px; border-radius: 5px; }
+  #menu button:hover { background: var(--hover); }
+  #menu button.danger { color: var(--danger); }
+  #menu button:disabled { color: var(--muted); cursor: default; background: transparent; }
+  #menu hr { border: 0; border-top: 1px solid var(--border); margin: 4px 2px; }
+  dialog { border: 1px solid var(--border); border-radius: 10px; background: var(--panel); color: var(--text); padding: 16px; }
+  dialog::backdrop { background: rgba(0,0,0,.4); }
+  .promo-row { display: flex; gap: 8px; margin: 10px 0; }
+  .promo-row button { width: 70px; height: 70px; padding: 4px; }
+  .promo-row button div { width: 100%; height: 100%; background-size: 100% 100%; }
+  #pasteText { width: min(620px, 80vw); height: 260px; font-family: Consolas, monospace; font-size: 13px; display: block; margin: 8px 0; }
+  .dlg-row { display: flex; justify-content: flex-end; gap: 8px; }
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--text); color: var(--bg);
+    padding: 8px 16px; border-radius: 6px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 3000; max-width: 80vw; }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="brand">Grandmist</div>
+  <div class="file-bar"><button id="btnFile" data-i18n="file_menu">File ▾</button><span id="docName" class="doc-name"></span><button id="btnLang" class="lang-btn" data-i18n-title="language" title="Language">EN</button></div>
+  <div class="lib-actions">
+    <button id="btnNew" class="primary" data-i18n="new_record" data-i18n-title="new_record_tip">+ Record</button>
+    <button id="btnImport" data-i18n="import_menu">Import ▾</button>
+    <button id="btnExport" data-i18n="export_menu">Export ▾</button>
+  </div>
+  <input id="search" data-i18n-ph="search_ph">
+  <div id="libList"></div>
+  <div class="lib-foot"><span id="saveState"></span><a id="showFile" hidden data-i18n="show_in_folder">Show in folder</a></div>
+</aside>
+
+<main class="center">
+  <div class="board-tools">
+    <div class="view-tabs" data-i18n-title="view_tip"><button id="vBoard" class="on" data-i18n="view_board">Board</button><button id="vGraph" data-i18n="view_tree">Tree</button></div>
+    <button id="btnFlip" data-i18n="flip" data-i18n-title="flip_tip">⇅ Flip</button>
+    <label class="scale"><span data-i18n="size">Size</span> <input type="range" id="scale" min="32" max="130" step="1"></label>
+    <button id="btnFit" data-i18n="fit" data-i18n-title="fit_tip">Fit</button>
+  </div>
+  <div class="board-frame" id="frame">
+    <div class="ranks" id="ranks"></div>
+    <div id="board" class="board"></div>
+    <div class="files" id="files"></div>
+  </div>
+  <div id="graphWrap">
+    <div class="graph-tools">
+      <span id="graphInfo"></span><span style="flex:1"></span>
+      <select id="gScope"><option value="record" data-i18n="g_record">This record</option><option value="file" data-i18n="g_file">Whole file</option></select>
+      <span data-i18n="depth">Depth</span> <select id="gDepth"><option value="6" data-i18n="n_plies" data-n="6">6 plies</option><option value="10" data-i18n="n_plies" data-n="10">10 plies</option><option value="16" data-i18n="n_plies" data-n="16">16 plies</option><option value="999" data-i18n="all">All</option></select>
+      <button id="gOut" data-i18n-title="zoom_out_tip">−</button><button id="gIn" data-i18n-title="zoom_in_tip">+</button>
+    </div>
+    <div id="graph"></div>
+  </div>
+  <div class="nav">
+    <button id="btnFirst" data-i18n-title="nav_first_tip">⏮</button>
+    <button id="btnPrev" data-i18n-title="nav_prev_tip">◀</button>
+    <button id="btnNext" data-i18n-title="nav_next_tip">▶</button>
+    <button id="btnLast" data-i18n-title="nav_last_tip">⏭</button>
+  </div>
+  <div id="status"></div>
+</main>
+
+<section class="right">
+  <div class="rec-head">
+    <input id="title" class="title-input" data-i18n-ph="title_ph">
+    <div class="head-row">
+      <input id="category" list="catList" data-i18n-ph="category_ph">
+      <datalist id="catList"></datalist>
+    </div>
+    <details id="infoBox">
+      <summary data-i18n="game_info">Game info &amp; start position</summary>
+      <div class="info-grid">
+        <label><span data-i18n="hdr_white">White</span><input data-h="White"></label>
+        <label><span data-i18n="hdr_black">Black</span><input data-h="Black"></label>
+        <label><span data-i18n="hdr_event">Event</span><input data-h="Event"></label>
+        <label><span data-i18n="hdr_site">Site</span><input data-h="Site"></label>
+        <label><span data-i18n="hdr_date">Date</span><input data-h="Date" placeholder="2026.10.29"></label>
+        <label><span data-i18n="hdr_round">Round</span><input data-h="Round"></label>
+        <label><span data-i18n="hdr_result">Result</span>
+          <select data-h="Result">
+            <option value="*" data-i18n="res_unknown">— Unknown / study</option>
+            <option value="1-0" data-i18n="res_white">White wins 1-0</option>
+            <option value="0-1" data-i18n="res_black">Black wins 0-1</option>
+            <option value="1/2-1/2" data-i18n="res_draw">Draw ½-½</option>
+          </select>
+        </label>
+        <label><span data-i18n="start_position">Start position</span><button id="btnFEN" type="button" data-i18n="set_fen">Set from FEN…</button></label>
+      </div>
+    </details>
+  </div>
+
+  <div class="notation-panel">
+    <div class="panel-title"><span data-i18n="notation">Notation</span><span class="sp"></span><span class="hint" data-i18n="notation_hint"></span></div>
+    <div id="notation" class="notation"></div>
+  </div>
+
+  <div class="comment-panel">
+    <div class="nag-bar" id="nagBar"></div>
+    <textarea id="comment"></textarea>
+  </div>
+
+  <div class="tree-panel">
+    <div class="panel-title">
+      <button class="ptab on" data-tab="engine" data-i18n="engine">Engine</button><button class="ptab" data-tab="tree" data-i18n="opening_tree">Opening tree</button><span class="sp"></span>
+      <span class="tab-tools" data-for="engine">
+        <select id="engSel"></select><button id="engAdd" class="small-btn" data-i18n-title="eng_add">+</button><button id="engRemove" class="small-btn" data-i18n-title="eng_remove">−</button><button id="engGo" class="small-btn primary">▶</button>
+      </span>
+      <span class="tab-tools" data-for="tree" hidden>
+        <label><input type="checkbox" id="treeVars"> <span data-i18n="include_vars">Include variations</span></label>
+        <select id="treeScope"><option value="all" data-i18n="scope_all">All records</option><option value="cat" data-i18n="scope_cat">This category</option></select>
+      </span>
+    </div>
+    <div class="tree-body" data-pane="engine"><div id="engHead" class="eng-head"></div><div id="engLines"></div></div>
+    <div class="tree-body" data-pane="tree" hidden><div id="tree"></div><div id="treeRecs" class="tree-recs"></div></div>
+  </div>
+</section>
+
+<div id="menu"></div>
+<div id="peek"></div>
+
+<dialog id="promoDlg">
+  <form method="dialog">
+    <div data-i18n="promote_to">Promote to:</div>
+    <div class="promo-row" id="promoRow"></div>
+    <div class="dlg-row"><button value="" data-i18n="cancel">Cancel</button></div>
+  </form>
+</dialog>
+
+<dialog id="onlineDlg">
+  <form method="dialog">
+    <b data-i18n="io_title">Import games</b>
+    <div class="io-grid">
+      <label><span data-i18n="io_site">Site</span><select id="ioSite"><option value="lichess">Lichess</option><option value="chesscom">Chess.com</option></select></label>
+      <label><span data-i18n="io_user">Username</span><input id="ioUser" autocomplete="off" spellcheck="false"></label>
+      <label><span data-i18n="io_max">Games</span><select id="ioMax"><option value="50">50</option><option value="200">200</option><option value="1000">1000</option><option value="0" data-i18n="io_all">All</option></select></label>
+    </div>
+    <div id="ioStatus" class="hint"></div>
+    <div class="dlg-row"><button value="" data-i18n="cancel">Cancel</button><button id="ioGo" type="button" class="primary" data-i18n="io_go">Import</button></div>
+  </form>
+</dialog>
+
+<dialog id="pasteDlg">
+  <form method="dialog">
+    <b data-i18n="paste_title">Paste PGN</b>
+    <div class="hint" data-i18n="paste_hint"></div>
+    <textarea id="pasteText" placeholder='[Title "My repertoire"]&#10;&#10;1. e4 e5 (1... c5 {Sicilian}) 2. Nf3 *'></textarea>
+    <label class="hint"><span data-i18n="paste_cat">Import into category:</span> <input id="pasteCat" data-i18n-ph="optional"></label>
+    <div class="dlg-row"><button value="" data-i18n="cancel">Cancel</button><button value="ok" class="primary" data-i18n="import">Import</button></div>
+  </form>
+</dialog>
+
+<div id="toast" class="toast"></div>
+
+<script>
+// ===================== Rules engine =====================
+const FILES = 'abcdefgh';
+const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+const DIRS = {
+  n: [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]],
+  b: [[-1,-1],[-1,1],[1,-1],[1,1]],
+  r: [[-1,0],[1,0],[0,-1],[0,1]],
+};
+DIRS.q = DIRS.k = [...DIRS.b, ...DIRS.r];
+
+// Square index 0 = a8, 63 = h1; uppercase = white, lowercase = black
+const sqName = s => FILES[s & 7] + (8 - (s >> 3));
+const sqIdx = n => (8 - parseInt(n[1], 10)) * 8 + FILES.indexOf(n[0]);
+const isW = p => !!p && p === p.toUpperCase();
+const colorOf = p => p ? (isW(p) ? 'w' : 'b') : null;
+const onBoard = (r, f) => r >= 0 && r < 8 && f >= 0 && f < 8;
+const kingSq = (b, c) => b.indexOf(c === 'w' ? 'K' : 'k');
+
+function fromFEN(fen) {
+  const [pos, turn = 'w', cast = '-', ep = '-', half = '0', full = '1'] = fen.trim().split(/\s+/);
+  const board = [];
+  for (const row of pos.split('/'))
+    for (const ch of row) {
+      if (/\d/.test(ch)) for (let i = 0; i < +ch; i++) board.push(null);
+      else if (/[pnbrqkPNBRQK]/.test(ch)) board.push(ch);
+      else throw new Error(t('err_fen_char', { ch }));
+    }
+  if (board.length !== 64) throw new Error(t('err_fen'));
+  if (turn !== 'w' && turn !== 'b') throw new Error(t('err_fen_side'));
+  return {
+    board, turn,
+    castling: { K: cast.includes('K'), Q: cast.includes('Q'), k: cast.includes('k'), q: cast.includes('q') },
+    ep: ep === '-' ? null : sqIdx(ep), half: +half || 0, full: +full || 1,
+  };
+}
+
+function attacked(b, sq, by) {
+  const r = sq >> 3, f = sq & 7;
+  const is = (rr, ff, types) => {
+    if (!onBoard(rr, ff)) return false;
+    const p = b[rr * 8 + ff];
+    return !!p && colorOf(p) === by && types.includes(p.toLowerCase());
+  };
+  const pr = by === 'w' ? r + 1 : r - 1;
+  if (is(pr, f - 1, 'p') || is(pr, f + 1, 'p')) return true;
+  for (const [dr, df] of DIRS.n) if (is(r + dr, f + df, 'n')) return true;
+  for (const [dr, df] of DIRS.k) if (is(r + dr, f + df, 'k')) return true;
+  const ray = (dirs, types) => {
+    for (const [dr, df] of dirs) {
+      let rr = r + dr, ff = f + df;
+      while (onBoard(rr, ff)) {
+        const p = b[rr * 8 + ff];
+        if (p) { if (colorOf(p) === by && types.includes(p.toLowerCase())) return true; break; }
+        rr += dr; ff += df;
+      }
+    }
+    return false;
+  };
+  return ray(DIRS.b, 'bq') || ray(DIRS.r, 'rq');
+}
+
+function pseudoMoves(st) {
+  const b = st.board, c = st.turn, out = [];
+  for (let s = 0; s < 64; s++) {
+    const p = b[s];
+    if (!p || colorOf(p) !== c) continue;
+    const r = s >> 3, f = s & 7, t = p.toLowerCase();
+    if (t === 'p') {
+      const d = c === 'w' ? -1 : 1, r1 = r + d, last = c === 'w' ? 0 : 7;
+      const push = (to, cap, ep) => {
+        if ((to >> 3) === last) for (const pr of 'qrbn') out.push({ from: s, to, piece: p, captured: cap, promo: pr });
+        else out.push({ from: s, to, piece: p, captured: cap, ep: !!ep });
+      };
+      if (onBoard(r1, f) && !b[r1 * 8 + f]) {
+        push(r1 * 8 + f, null);
+        const r2 = r + 2 * d;
+        if (r === (c === 'w' ? 6 : 1) && !b[r2 * 8 + f]) out.push({ from: s, to: r2 * 8 + f, piece: p, captured: null, double: true });
+      }
+      for (const df of [-1, 1]) {
+        const ff = f + df;
+        if (!onBoard(r1, ff)) continue;
+        const to = r1 * 8 + ff;
+        if (b[to] && colorOf(b[to]) !== c) push(to, b[to]);
+        else if (!b[to] && st.ep === to) push(to, c === 'w' ? 'p' : 'P', true);
+      }
+    } else if (t === 'n' || t === 'k') {
+      for (const [dr, df] of DIRS[t]) {
+        const rr = r + dr, ff = f + df;
+        if (!onBoard(rr, ff)) continue;
+        const to = rr * 8 + ff;
+        if (b[to] && colorOf(b[to]) === c) continue;
+        out.push({ from: s, to, piece: p, captured: b[to] });
+      }
+      const e = (c === 'w' ? 7 : 0) * 8 + 4;
+      if (t === 'k' && s === e) {
+        const opp = c === 'w' ? 'b' : 'w', R = c === 'w' ? 'R' : 'r';
+        const [kk, qq] = c === 'w' ? ['K', 'Q'] : ['k', 'q'];
+        if (st.castling[kk] && !b[e + 1] && !b[e + 2] && b[e + 3] === R &&
+            !attacked(b, e, opp) && !attacked(b, e + 1, opp) && !attacked(b, e + 2, opp))
+          out.push({ from: e, to: e + 2, piece: p, captured: null, castle: 'K' });
+        if (st.castling[qq] && !b[e - 1] && !b[e - 2] && !b[e - 3] && b[e - 4] === R &&
+            !attacked(b, e, opp) && !attacked(b, e - 1, opp) && !attacked(b, e - 2, opp))
+          out.push({ from: e, to: e - 2, piece: p, captured: null, castle: 'Q' });
+      }
+    } else {
+      for (const [dr, df] of DIRS[t]) {
+        let rr = r + dr, ff = f + df;
+        while (onBoard(rr, ff)) {
+          const to = rr * 8 + ff;
+          if (b[to]) { if (colorOf(b[to]) !== c) out.push({ from: s, to, piece: p, captured: b[to] }); break; }
+          out.push({ from: s, to, piece: p, captured: null });
+          rr += dr; ff += df;
+        }
+      }
+    }
+  }
+  return out;
+}
+
+function makeMove(st, m) {
+  const b = st.board.slice(), c = st.turn;
+  b[m.to] = m.promo ? (c === 'w' ? m.promo.toUpperCase() : m.promo) : m.piece;
+  b[m.from] = null;
+  if (m.ep) b[(m.from >> 3) * 8 + (m.to & 7)] = null;
+  if (m.castle) {
+    const row = (m.from >> 3) * 8;
+    if (m.castle === 'K') { b[row + 5] = b[row + 7]; b[row + 7] = null; }
+    else { b[row + 3] = b[row]; b[row] = null; }
+  }
+  const cs = { ...st.castling };
+  if (m.piece === 'K') cs.K = cs.Q = false;
+  if (m.piece === 'k') cs.k = cs.q = false;
+  for (const s of [m.from, m.to]) {
+    if (s === 63) cs.K = false; if (s === 56) cs.Q = false;
+    if (s === 7) cs.k = false;  if (s === 0) cs.q = false;
+  }
+  return {
+    board: b, turn: c === 'w' ? 'b' : 'w', castling: cs,
+    ep: m.double ? (m.from + m.to) / 2 : null,
+    half: (m.piece.toLowerCase() === 'p' || m.captured) ? 0 : st.half + 1,
+    full: c === 'b' ? st.full + 1 : st.full,
+  };
+}
+
+function legalMoves(st) {
+  return pseudoMoves(st).filter(m => {
+    const ns = makeMove(st, m), k = kingSq(ns.board, st.turn);
+    return k < 0 || !attacked(ns.board, k, ns.turn);
+  });
+}
+
+function inCheck(st) {
+  const k = kingSq(st.board, st.turn);
+  return k >= 0 && attacked(st.board, k, st.turn === 'w' ? 'b' : 'w');
+}
+
+// SAN without the +/# suffix
+function sanBase(st, m, legal) {
+  if (m.castle) return m.castle === 'K' ? 'O-O' : 'O-O-O';
+  if (m.piece.toLowerCase() === 'p')
+    return (m.captured ? FILES[m.from & 7] + 'x' : '') + sqName(m.to) + (m.promo ? '=' + m.promo.toUpperCase() : '');
+  const others = legal.filter(o => o.piece === m.piece && o.to === m.to && o.from !== m.from);
+  let dis = '';
+  if (others.length) {
+    if (!others.some(o => (o.from & 7) === (m.from & 7))) dis = FILES[m.from & 7];
+    else if (!others.some(o => (o.from >> 3) === (m.from >> 3))) dis = sqName(m.from)[1];
+    else dis = sqName(m.from);
+  }
+  return m.piece.toUpperCase() + dis + (m.captured ? 'x' : '') + sqName(m.to);
+}
+
+function toSAN(st, m, legal = legalMoves(st)) {
+  let s = sanBase(st, m, legal);
+  const ns = makeMove(st, m);
+  if (inCheck(ns)) s += legalMoves(ns).length ? '+' : '#';
+  return s;
+}
+
+// Position key used by the opening tree to match identical positions (including transpositions)
+function fenKey(st) {
+  let s = '';
+  for (let r = 0; r < 8; r++) {
+    let e = 0;
+    for (let f = 0; f < 8; f++) {
+      const p = st.board[r * 8 + f];
+      if (!p) e++; else { if (e) { s += e; e = 0; } s += p; }
+    }
+    if (e) s += e;
+    if (r < 7) s += '/';
+  }
+  const c = st.castling;
+  const cs = (c.K ? 'K' : '') + (c.Q ? 'Q' : '') + (c.k ? 'k' : '') + (c.q ? 'q' : '') || '-';
+  let ep = '-';
+  if (st.ep !== null) {
+    const pawn = st.turn === 'w' ? 'P' : 'p', r = (st.ep >> 3) + (st.turn === 'w' ? 1 : -1), f = st.ep & 7;
+    if ((f > 0 && st.board[r * 8 + f - 1] === pawn) || (f < 7 && st.board[r * 8 + f + 1] === pawn)) ep = sqName(st.ep);
+  }
+  return `${s} ${st.turn} ${cs} ${ep}`;
+}
+
+// ===================== Move tree & PGN =====================
+const RESULTS = /^(1-0|0-1|1\/2-1\/2|\*)$/;
+const ANN = { '!': 1, '?': 2, '!!': 3, '??': 4, '!?': 5, '?!': 6 };
+const EVAL_WORDS = { '=': 10, '∞': 13, '+=': 14, '⩲': 14, '=+': 15, '⩱': 15, '+/-': 16, '±': 16, '-/+': 17, '∓': 17, '+-': 18, '-+': 19 };
+const NAG_TEXT = { 1: '!', 2: '?', 3: '!!', 4: '??', 5: '!?', 6: '?!', 10: '=', 13: '∞', 14: '⩲', 15: '⩱', 16: '±', 17: '∓', 18: '+-', 19: '-+' };
+const normSAN = t => t.replace(/[+#!?=]/g, '').replace(/0/g, 'O').replace(/^P(?=[a-h])/, '').replace(/e\.p\.$/, '');
+
+function mkNode(parent, move, st) {
+  return { parent, move, san: move ? move.san : null, st, children: [], comment: '', pre: '', nags: [], key: null };
+}
+const nodeKey = n => n.key || (n.key = fenKey(n.st));
+const sameMove = (a, b) => a.from === b.from && a.to === b.to && (a.promo || '') === (b.promo || '');
+
+function addChild(node, m, legal) {
+  const ex = node.children.find(c => sameMove(c.move, m));
+  if (ex) return ex;
+  const child = mkNode(node, { ...m, san: toSAN(node.st, m, legal) }, makeMove(node.st, m));
+  node.children.push(child);
+  return child;
+}
+
+function findMoveBySAN(st, tok) {
+  const want = normSAN(tok), legal = legalMoves(st);
+  const dest = want.match(/[a-h][1-8](?=[QRBN]?$)/);
+  const to = dest ? sqIdx(dest[0]) : -1;
+  for (const m of legal) if ((to < 0 || m.to === to) && normSAN(sanBase(st, m, legal)) === want) return { m, legal };
+  return null;
+}
+
+// A PGN file may hold many games: a tag line after movetext starts the next one
+function splitPGN(text) {
+  const games = []; let cur = [], seenMoves = false;
+  for (const line of text.replace(/^\uFEFF/, '').replace(/\r/g, '').split('\n')) {
+    const isTag = /^\s*\[\w+\s+".*"\s*\]\s*$/.test(line);
+    if (isTag && seenMoves) { games.push(cur.join('\n')); cur = []; seenMoves = false; }
+    if (!isTag && line.trim()) seenMoves = true;
+    cur.push(line);
+  }
+  if (cur.join('').trim()) games.push(cur.join('\n'));
+  return games;
+}
+
+function tokenize(text) {
+  const toks = [], n = text.length;
+  let i = 0;
+  while (i < n) {
+    const c = text[i];
+    if (/\s/.test(c)) { i++; continue; }
+    if (c === '{') { const j = text.indexOf('}', i + 1), e = j < 0 ? n : j; toks.push({ t: 'cmt', v: text.slice(i + 1, e).replace(/\[%[^\]]*\]/g, '').replace(/\s+/g, ' ').trim() }); i = e + 1; continue; }
+    if (c === ';') { const j = text.indexOf('\n', i), e = j < 0 ? n : j; toks.push({ t: 'cmt', v: text.slice(i + 1, e).trim() }); i = e; continue; }
+    if (c === '%' && (i === 0 || text[i - 1] === '\n')) { const j = text.indexOf('\n', i); i = j < 0 ? n : j; continue; }
+    if (c === '(' || c === ')') { toks.push({ t: c }); i++; continue; }
+    if (c === '$') { const m = /^\$(\d+)/.exec(text.slice(i, i + 5)); if (m) { toks.push({ t: 'nag', v: +m[1] }); i += m[0].length; } else i++; continue; }
+    let j = i;
+    while (j < n && !/[\s{}();$]/.test(text[j])) j++;
+    let w = text.slice(i, j);
+    i = j;
+    w = w.replace(/^\d+\.+/, '');
+    if (!w || /^\d+$/.test(w) || /^\.+$/.test(w)) continue;
+    if (RESULTS.test(w)) { toks.push({ t: 'res', v: w }); continue; }
+    if (w in EVAL_WORDS) { toks.push({ t: 'nag', v: EVAL_WORDS[w] }); continue; }
+    if (w in ANN) { toks.push({ t: 'nag', v: ANN[w] }); continue; }
+    const ann = w.match(/[!?]+$/);
+    let nag = null;
+    if (ann) { w = w.slice(0, -ann[0].length); nag = ANN[ann[0]] || null; }
+    toks.push({ t: 'san', v: w, nag });
+  }
+  return toks;
+}
+
+// Parse one PGN game (with variations, comments and NAGs) into a move tree
+function parseRecordPGN(text) {
+  const tags = {}; let body = '';
+  for (const line of text.split('\n')) {
+    const m = line.match(/^\s*\[(\w+)\s+"((?:[^"\\]|\\.)*)"\s*\]\s*$/);
+    if (m) tags[m[1]] = m[2].replace(/\\(.)/g, '$1'); else body += line + '\n';
+  }
+  const startFEN = tags.FEN || START_FEN;
+  const root = mkNode(null, null, fromFEN(startFEN));
+  let cur = root, afterOpen = false, pending = '', skip = 0, result = null;
+  const stack = [], warnings = [];
+  for (const tk of tokenize(body)) {
+    if (skip) { // skipping a variation that contains an illegal move
+      if (tk.t === '(') skip++;
+      else if (tk.t === ')') { skip--; if (!skip) cur = stack.pop(); }
+      continue;
+    }
+    if (tk.t === 'cmt') {
+      if (!tk.v) continue;
+      if (afterOpen) pending = (pending ? pending + ' ' : '') + tk.v;
+      else cur.comment = (cur.comment ? cur.comment + ' ' : '') + tk.v;
+    } else if (tk.t === '(') {
+      stack.push(cur);
+      if (cur.parent) cur = cur.parent;
+      afterOpen = true;
+    } else if (tk.t === ')') {
+      if (stack.length) cur = stack.pop();
+      afterOpen = false;
+    } else if (tk.t === 'nag') {
+      if (cur !== root && !cur.nags.includes(tk.v)) cur.nags.push(tk.v);
+    } else if (tk.t === 'res') {
+      result = tk.v;
+    } else {
+      const found = findMoveBySAN(cur.st, tk.v);
+      if (!found) {
+        const where = `${cur.st.full}${cur.st.turn === 'w' ? '.' : '...'} ${tk.v}`;
+        if (!stack.length) throw new Error(t('err_illegal', { move: where }));
+        warnings.push(t('warn_var', { move: where }));
+        skip = 1;
+        continue;
+      }
+      const child = addChild(cur, found.m, found.legal);
+      if (pending) { child.pre = pending; pending = ''; }
+      if (tk.nag && !child.nags.includes(tk.nag)) child.nags.push(tk.nag);
+      cur = child;
+      afterOpen = false;
+    }
+  }
+  const clean = v => (!v || v === '?' || /^[?.]+$/.test(v)) ? '' : v;
+  const headers = { Title: '', Category: '', Event: '', Site: '', Date: '', Round: '', White: '', Black: '', Result: '*' };
+  for (const k in tags) if (k !== 'FEN' && k !== 'SetUp') headers[k] = k === 'Result' ? tags[k] : clean(tags[k]);
+  if (!tags.Result && result) headers.Result = result;
+  if (!RESULTS.test(headers.Result)) headers.Result = '*';
+  return { headers, startFEN, root, warnings };
+}
+
+function movetextTokens(root) {
+  const out = [];
+  const esc = s => s.replace(/[{}]/g, '');
+  const emit = (node, force) => {
+    if (node.pre) { out.push(`{${esc(node.pre)}}`); force = true; }
+    const ps = node.parent.st;
+    out.push((ps.turn === 'w' ? ps.full + '.\u0001' : force ? ps.full + '...\u0001' : '') + node.san); // \u0001 keeps the move number with its move when wrapping
+    for (const n of node.nags) out.push('$' + n);
+    if (node.comment) { out.push(`{${esc(node.comment)}}`); return true; }
+    return false;
+  };
+  const line = (node, force) => {
+    while (node.children.length) {
+      const main = node.children[0];
+      let f = emit(main, force);
+      if (node.children.length > 1) {
+        for (const v of node.children.slice(1)) {
+          out.push('(');
+          line(v, emit(v, true));
+          out.push(')');
+        }
+        f = true;
+      }
+      force = f;
+      node = main;
+    }
+  };
+  if (root.comment) out.push(`{${esc(root.comment)}}`);
+  line(root, true);
+  return out;
+}
+
+function recordToPGN(r) {
+  const h = { ...r.headers };
+  const order = ['Event', 'Site', 'Date', 'Round', 'White', 'Black', 'Result'];
+  const blank = { Date: '????.??.??', Result: '*' };
+  let out = '';
+  const tag = (k, v) => { out += `[${k} "${String(v).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"]\n`; };
+  for (const k of order) tag(k, h[k] || blank[k] || '?');
+  for (const k in h) if (!order.includes(k) && h[k]) tag(k, h[k]);
+  if (r.startFEN !== START_FEN) { tag('SetUp', '1'); tag('FEN', r.startFEN); }
+  out += '\n';
+  const toks = movetextTokens(r.root);
+  toks.push(h.Result || '*');
+  const text = toks.join(' ').replace(/\( /g, '(').replace(/ \)/g, ')');
+  let lineStr = '';
+  for (const w of text.split(' ')) {
+    if (lineStr && lineStr.length + 1 + w.length > 79) { out += lineStr + '\n'; lineStr = w; }
+    else lineStr = lineStr ? lineStr + ' ' + w : w;
+  }
+  return (out + lineStr + '\n').replace(/\u0001/g, ' ');
+}
+
+// ===================== Piece graphics (cburnett, CC BY-SA 3.0) =====================
+const SVG_PIECES = {
+  wK: `<g fill="none" fill-rule="evenodd" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22.5 11.63V6M20 8h5" stroke-linejoin="miter"/><path d="M22.5 25s4.5-7.5 3-10.5c0 0-1-2.5-3-2.5s-3 2.5-3 2.5c-1.5 3 3 10.5 3 10.5" fill="#fff" stroke-linecap="butt" stroke-linejoin="miter"/><path d="M12.5 37c5.5 3.5 14.5 3.5 20 0v-7s9-4.5 6-10.5c-4-6.5-13.5-3.5-16 4V27v-3.5c-2.5-7.5-12-10.5-16-4-3 6 6 10.5 6 10.5v7" fill="#fff"/><path d="M12.5 30c5.5-3 14.5-3 20 0m-20 3.5c5.5-3 14.5-3 20 0m-20 3.5c5.5-3 14.5-3 20 0"/></g>`,
+  wQ: `<g fill="#fff" fill-rule="evenodd" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 12a2 2 0 1 1-4 0 2 2 0 1 1 4 0zM24.5 7.5a2 2 0 1 1-4 0 2 2 0 1 1 4 0zM41 12a2 2 0 1 1-4 0 2 2 0 1 1 4 0zM16 8.5a2 2 0 1 1-4 0 2 2 0 1 1 4 0zM33 9a2 2 0 1 1-4 0 2 2 0 1 1 4 0z"/><path d="M9 26c8.5-1.5 21-1.5 27 0l2-12-7 11V11l-5.5 13.5-3-15-3 15-5.5-14V25L7 14l2 12z" stroke-linecap="butt"/><path d="M9 26c0 2 1.5 2 2.5 4 1 1.5 1 1 .5 3.5-1.5 1-1.5 2.5-1.5 2.5-1.5 1.5.5 2.5.5 2.5 6.5 1 16.5 1 23 0 0 0 1.5-1 0-2.5 0 0 .5-1.5-1-2.5-.5-2.5-.5-2 .5-3.5 1-2 2.5-2 2.5-4-8.5-1.5-18.5-1.5-27 0z" stroke-linecap="butt"/><path d="M11.5 30c3.5-1 18.5-1 22 0M12 33.5c6-1 15-1 21 0" fill="none"/></g>`,
+  wR: `<g fill="#fff" fill-rule="evenodd" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 39h27v-3H9v3zM12 36v-4h21v4H12zM11 14V9h4v2h5V9h5v2h5V9h4v5" stroke-linecap="butt"/><path d="M34 14l-3 3H14l-3-3"/><path d="M31 17v12.5H14V17" stroke-linecap="butt" stroke-linejoin="miter"/><path d="M31 29.5l1.5 2.5h-20l1.5-2.5"/><path d="M11 14h23" fill="none" stroke-linejoin="miter"/></g>`,
+  wB: `<g fill="none" fill-rule="evenodd" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><g fill="#fff" stroke-linecap="butt"><path d="M9 36c3.39-.97 10.11.43 13.5-2 3.39 2.43 10.11 1.03 13.5 2 0 0 1.65.54 3 2-.68.97-1.65.99-3 .5-3.39-.97-10.11.46-13.5-1-3.39 1.46-10.11.03-13.5 1-1.354.49-2.323.47-3-.5 1.354-1.94 3-2 3-2z"/><path d="M15 32c2.5 2.5 12.5 2.5 15 0 .5-1.5 0-2 0-2 0-2.5-2.5-4-2.5-4 5.5-1.5 6-11.5-5-15.5-11 4-10.5 14-5 15.5 0 0-2.5 1.5-2.5 4 0 0-.5.5 0 2z"/><path d="M25 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 1 1 5 0z"/></g><path d="M17.5 26h10M15 30h15m-7.5-14.5v5M20 18h5" stroke-linejoin="miter"/></g>`,
+  wN: `<g fill="none" fill-rule="evenodd" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10c10.5 1 16.5 8 16 29H15c0-9 10-6.5 8-21" fill="#fff"/><path d="M24 18c.38 2.91-5.55 7.37-8 9-3 2-2.82 4.34-5 4-1.042-.94 1.41-3.04 0-3-1 0 .19 1.23-1 2-1 0-4.003 1-4-4 0-2 6-12 6-12s1.89-1.9 2-3.5c-.73-.994-.5-2-.5-3 1-1 3 2.5 3 2.5h2s.78-1.992 2.5-3c1 0 1 3 1 3" fill="#fff"/><path d="M9.5 25.5a.5.5 0 1 1-1 0 .5.5 0 1 1 1 0zm5.433-9.75a.5 1.5 30 1 1-.866-.5.5 1.5 30 1 1 .866.5z" fill="#000"/></g>`,
+  wP: `<path d="M22.5 9c-2.21 0-4 1.79-4 4 0 .89.29 1.71.78 2.38C17.33 16.5 16 18.59 16 21c0 2.03.94 3.84 2.41 5.03C15.41 27.09 11 31.58 11 39.5h23c0-7.92-4.41-12.41-7.41-13.47 1.47-1.19 2.41-3 2.41-5.03 0-2.41-1.33-4.5-3.28-5.62.49-.67.78-1.49.78-2.38 0-2.21-1.79-4-4-4z" fill="#fff" stroke="#000" stroke-width="1.5" stroke-linecap="round"/>`,
+  bK: `<g fill="none" fill-rule="evenodd" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22.5 11.63V6" stroke-linejoin="miter"/><path d="M22.5 25s4.5-7.5 3-10.5c0 0-1-2.5-3-2.5s-3 2.5-3 2.5c-1.5 3 3 10.5 3 10.5" fill="#000" stroke-linecap="butt" stroke-linejoin="miter"/><path d="M12.5 37c5.5 3.5 14.5 3.5 20 0v-7s9-4.5 6-10.5c-4-6.5-13.5-3.5-16 4V27v-3.5c-2.5-7.5-12-10.5-16-4-3 6 6 10.5 6 10.5v7" fill="#000"/><path d="M20 8h5" stroke-linejoin="miter"/><path d="M32 29.5s8.5-4 6.03-9.65C34.15 14 25 18 22.5 24.5l.01 2.1-.01-2.1C20 18 9.906 14 6.997 19.85c-2.497 5.65 4.853 9 4.853 9M12.5 30c5.5-3 14.5-3 20 0m-20 3.5c5.5-3 14.5-3 20 0m-20 3.5c5.5-3 14.5-3 20 0" stroke="#fff"/></g>`,
+  bQ: `<g fill-rule="evenodd" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><g stroke="none"><circle cx="6" cy="12" r="2.75"/><circle cx="14" cy="9" r="2.75"/><circle cx="22.5" cy="8" r="2.75"/><circle cx="31" cy="9" r="2.75"/><circle cx="39" cy="12" r="2.75"/></g><path d="M9 26c8.5-1.5 21-1.5 27 0l2.5-12.5L31 25l-.3-14.1-5.2 13.6-3-14.5-3 14.5-5.2-13.6L14 25 6.5 13.5 9 26z" stroke-linecap="butt"/><path d="M9 26c0 2 1.5 2 2.5 4 1 1.5 1 1 .5 3.5-1.5 1-1.5 2.5-1.5 2.5-1.5 1.5.5 2.5.5 2.5 6.5 1 16.5 1 23 0 0 0 1.5-1 0-2.5 0 0 .5-1.5-1-2.5-.5-2.5-.5-2 .5-3.5 1-2 2.5-2 2.5-4-8.5-1.5-18.5-1.5-27 0z" stroke-linecap="butt"/><path d="M11 38.5a35 35 1 0 0 23 0" fill="none" stroke-linecap="butt"/><path d="M11 29a35 35 1 0 1 23 0M12.5 31.5h20M11.5 34.5a35 35 1 0 0 22 0M10.5 37.5a35 35 1 0 0 24 0" fill="none" stroke="#fff"/></g>`,
+  bR: `<g fill-rule="evenodd" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 39h27v-3H9v3zM12.5 32l1.5-2.5h17l1.5 2.5h-20zM12 36v-4h21v4H12z" stroke-linecap="butt"/><path d="M14 29.5v-13h17v13H14z" stroke-linecap="butt" stroke-linejoin="miter"/><path d="M14 16.5L11 14h23l-3 2.5H14zM11 14V9h4v2h5V9h5v2h5V9h4v5H11z" stroke-linecap="butt"/><path d="M12 35.5h21M13 31.5h19M14 29.5h17M14 16.5h17M11 14h23" fill="none" stroke="#fff" stroke-width="1" stroke-linejoin="miter"/></g>`,
+  bB: `<g fill="none" fill-rule="evenodd" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><g fill="#000" stroke-linecap="butt"><path d="M9 36c3.39-.97 10.11.43 13.5-2 3.39 2.43 10.11 1.03 13.5 2 0 0 1.65.54 3 2-.68.97-1.65.99-3 .5-3.39-.97-10.11.46-13.5-1-3.39 1.46-10.11.03-13.5 1-1.354.49-2.323.47-3-.5 1.354-1.94 3-2 3-2z"/><path d="M15 32c2.5 2.5 12.5 2.5 15 0 .5-1.5 0-2 0-2 0-2.5-2.5-4-2.5-4 5.5-1.5 6-11.5-5-15.5-11 4-10.5 14-5 15.5 0 0-2.5 1.5-2.5 4 0 0-.5.5 0 2z"/><path d="M25 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 1 1 5 0z"/></g><path d="M17.5 26h10M15 30h15m-7.5-14.5v5M20 18h5" stroke="#fff" stroke-linejoin="miter"/></g>`,
+  bN: `<g fill="none" fill-rule="evenodd" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10c10.5 1 16.5 8 16 29H15c0-9 10-6.5 8-21" fill="#000"/><path d="M24 18c.38 2.91-5.55 7.37-8 9-3 2-2.82 4.34-5 4-1.042-.94 1.41-3.04 0-3-1 0 .19 1.23-1 2-1 0-4.003 1-4-4 0-2 6-12 6-12s1.89-1.9 2-3.5c-.73-.994-.5-2-.5-3 1-1 3 2.5 3 2.5h2s.78-1.992 2.5-3c1 0 1 3 1 3" fill="#000"/><path d="M9.5 25.5a.5.5 0 1 1-1 0 .5.5 0 1 1 1 0zm5.433-9.75a.5 1.5 30 1 1-.866-.5.5 1.5 30 1 1 .866.5z" fill="#fff" stroke="#fff"/><path d="M24.55 10.4l-.45 1.45.5.15c3.15 1 5.65 2.49 7.9 6.75S35.75 29.06 35.25 39l-.05.5h2.25l.05-.5c.5-10.06-.88-16.85-3.25-21.34-2.37-4.49-5.79-6.64-9.19-7.16l-.51-.1z" fill="#fff" stroke="none"/></g>`,
+  bP: `<path d="M22.5 9c-2.21 0-4 1.79-4 4 0 .89.29 1.71.78 2.38C17.33 16.5 16 18.59 16 21c0 2.03.94 3.84 2.41 5.03C15.41 27.09 11 31.58 11 39.5h23c0-7.92-4.41-12.41-7.41-13.47 1.47-1.19 2.41-3 2.41-5.03 0-2.41-1.33-4.5-3.28-5.62.49-.67.78-1.49.78-2.38 0-2.21-1.79-4-4-4z" fill="#000" stroke="#000" stroke-width="1.5" stroke-linecap="round"/>`,
+};
+(function injectPieceCSS() {
+  let css = '';
+  for (const k in SVG_PIECES) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45">${SVG_PIECES[k]}</svg>`;
+    css += `.p-${k}{background-image:url("data:image/svg+xml,${encodeURIComponent(svg)}")}\n`;
+  }
+  const el = document.createElement('style');
+  el.textContent = css;
+  document.head.appendChild(el);
+})();
+const pieceClass = p => 'p-' + (isW(p) ? 'w' : 'b') + p.toUpperCase();
+
+// ===================== Storage: Python in the desktop app, browser fallbacks for testing =====================
+const Backend = {
+  desktop: false, api: null,
+  async init() {
+    const ready = () => window.pywebview && window.pywebview.api && typeof window.pywebview.api.read_file === 'function';
+    if (!ready()) {
+      await new Promise(res => {
+        const t = setTimeout(res, window.pywebview ? 8000 : 600);
+        window.addEventListener('pywebviewready', () => { clearTimeout(t); res(); }, { once: true });
+      });
+    }
+    this.desktop = ready();
+    this.api = this.desktop ? window.pywebview.api : null;
+  },
+  // App-wide settings (board size, view, recent files) — not part of any .gm file
+  async loadSettings() {
+    try {
+      const t = this.desktop ? await this.api.load_settings() : localStorage.getItem('grandmist-settings');
+      return t ? JSON.parse(t) : {};
+    } catch (e) { return {}; }
+  },
+  async saveSettings(obj) {
+    const t = JSON.stringify(obj);
+    if (this.desktop) return this.api.save_settings(t);
+    try { localStorage.setItem('grandmist-settings', t); } catch (e) { /* storage blocked */ }
+  },
+  async startup() { return this.desktop ? await this.api.startup() : {}; },
+  async readFile(path) { return this.desktop ? await this.api.read_file(path) : null; },
+  async writeFile(path, text) { return await this.api.write_file(path, text); },
+  // Returns { path, name, text } or null
+  async openDialog() {
+    if (this.desktop) return await this.api.open_dialog();
+    return new Promise(res => {
+      const inp = document.createElement('input');
+      inp.type = 'file'; inp.accept = '.gm,.pgn';
+      inp.onchange = async () => { const f = inp.files[0]; res(f ? { path: null, name: f.name, text: await f.text() } : null); };
+      inp.click();
+    });
+  },
+  // Writes the file and returns its path (desktop) or the file name (browser download)
+  async saveDialog(name, text) {
+    if (this.desktop) return await this.api.save_dialog(name, text);
+    return this.exportFile(name, text, 'application/json');
+  },
+  setWindow(title, dirty) { if (this.desktop) this.api.set_window(title, dirty); },
+  setStrings(strings) { if (this.desktop) this.api.set_strings(strings); },
+  // Optional private core: { available: false } in public builds
+  async coreInfo() { return this.desktop ? await this.api.core_info() : { available: false }; },
+  showInFolder(path) { if (this.desktop) this.api.show_in_folder(path); },
+  async exportFile(name, text, type = 'application/x-chess-pgn') {
+    if (this.desktop && type !== 'application/json') return await this.api.save_pgn(name, text);
+    const url = URL.createObjectURL(new Blob([text], { type }));
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return name;
+  },
+  async pickFiles() {
+    if (this.desktop) return await this.api.open_pgn();
+    return new Promise(res => {
+      const inp = document.createElement('input');
+      inp.type = 'file'; inp.accept = '.pgn,.txt'; inp.multiple = true;
+      inp.onchange = async () => res(await Promise.all([...inp.files].map(async f => ({ name: f.name, text: await f.text() }))));
+      inp.click();
+    });
+  },
+};
+
+// ===================== Languages =====================
+// Built-in packs live in app/lang/*.json. Extra packs (xx.json) can be dropped into a "lang"
+// folder next to Grandmist.exe; they override or add languages. Missing keys fall back to English.
+const I18N = { code: 'en', packs: {}, en: {} };
+function t(key, vars = {}) {
+  let v = (I18N.packs[I18N.code] || {})[key];
+  if (v == null) v = I18N.en[key];
+  if (v == null) return key;
+  if (typeof v === 'object') { // plural forms, e.g. { "one": "...", "few": "...", "other": "..." }
+    const form = new Intl.PluralRules(I18N.code).select(vars.n ?? 0);
+    v = v[form] ?? v.other ?? Object.values(v)[0];
+  }
+  return String(v).replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k] : m));
+}
+async function loadLanguages() {
+  let packs = Backend.desktop ? await Backend.api.get_languages() : null;
+  if (!packs) {
+    packs = {};
+    for (const c of ['en', 'zh', 'ru']) {
+      try { packs[c] = await (await fetch(`lang/${c}.json`)).json(); } catch (e) { /* missing pack */ }
+    }
+  }
+  I18N.packs = packs;
+  I18N.en = packs.en || {};
+}
+function applyStaticText() {
+  document.documentElement.lang = I18N.code;
+  for (const el of document.querySelectorAll('[data-i18n]')) el.textContent = t(el.dataset.i18n, { n: +el.dataset.n || 0 });
+  for (const el of document.querySelectorAll('[data-i18n-title]')) el.title = t(el.dataset.i18nTitle);
+  for (const el of document.querySelectorAll('[data-i18n-ph]')) el.placeholder = t(el.dataset.i18nPh);
+  $('#btnLang').textContent = I18N.code.toUpperCase();
+}
+function setLanguage(code) {
+  I18N.code = I18N.packs[code] ? code : 'en';
+  if (lib.prefs.lang !== I18N.code) { lib.prefs.lang = I18N.code; scheduleSave(); }
+  applyStaticText();
+  Backend.setStrings(Object.fromEntries(['close_title', 'close_msg', 'ft_gm', 'ft_pgn', 'ft_exe', 'ft_all'].map(k => [k, t(k)])));
+  if (rec) { renderAll(); updateDocUI(); }
+  if (typeof renderEngineList === 'function' && $('#engGo')) renderEngineList();
+}
+
+// ===================== App state =====================
+const $ = s => document.querySelector(s);
+const boardEl = $('#board');
+const lib = { prefs: {}, records: [] };
+let rec = null, cur = null, selected = null, index = new Map();
+
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+function blankHeaders(extra = {}) {
+  return { Title: '', Category: '', Event: '', Site: '', Date: '', Round: '', White: '', Black: '', Result: '*', ...extra };
+}
+function makeRecord(parsed) {
+  return { id: newId(), headers: parsed.headers, startFEN: parsed.startFEN, root: parsed.root, updated: Date.now(), pgn: null, dirty: true };
+}
+function recTitle(r) {
+  const h = r.headers;
+  return h.Title || (h.White || h.Black ? `${h.White || '?'} – ${h.Black || '?'}` : h.Event || t('untitled'));
+}
+function mainlineLength(r) { let n = 0, x = r.root; while (x.children.length) { x = x.children[0]; n++; } return n; }
+function variationCount(node) { let n = Math.max(0, node.children.length - 1); for (const c of node.children) n += variationCount(c); return n; }
+const isAncestor = (a, n) => { for (; n; n = n.parent) if (n === a) return true; return false; };
+const onMainline = n => { for (; n.parent; n = n.parent) if (n.parent.children[0] !== n) return false; return true; };
+const moveLabel = n => { const ps = n.parent.st; return `${ps.full}${ps.turn === 'w' ? '.' : '...'} ${n.san}`; };
+
+function toast(msg, ms = 2000) {
+  const t = $('#toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => t.classList.remove('show'), ms);
+}
+const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+
+// ---------- Document: one .gm file holds a whole collection of records ----------
+const doc = { path: null, name: 'Untitled', dirty: false };
+let saveTimer = null;
+function setSaveState(s) { $('#saveState').textContent = s; }
+// Preferences are saved on their own, separately from the open document
+function scheduleSave() { clearTimeout(saveTimer); saveTimer = setTimeout(() => Backend.saveSettings({ prefs: lib.prefs }), 400); }
+const fileName = p => p.split(/[\\/]/).pop();
+const baseName = p => fileName(p).replace(/\.[^.]+$/, '');
+
+function updateDocUI() {
+  const dn = $('#docName');
+  dn.textContent = doc.name + '.gm';
+  dn.title = doc.path || t('not_saved');
+  dn.classList.toggle('dirty', doc.dirty);
+  setSaveState(doc.dirty ? t('unsaved') : doc.path ? t('saved') : '');
+  $('#showFile').hidden = !(Backend.desktop && doc.path);
+  const title = `${doc.name}${doc.dirty ? ' •' : ''} — Grandmist`;
+  document.title = title;
+  Backend.setWindow(title, doc.dirty);
+}
+function markDirty() { if (!doc.dirty) { doc.dirty = true; updateDocUI(); } }
+function touch() {
+  if (!rec) return;
+  rec.dirty = true; rec.updated = Date.now();
+  markDirty(); scheduleIndex();
+}
+
+function docText() {
+  for (const r of lib.records) if (!r.broken && (r.dirty || !r.pgn)) { r.pgn = recordToPGN(r); r.dirty = false; }
+  return JSON.stringify({ format: 'grandmist', version: 1, lastOpen: rec ? rec.id : null,
+    records: lib.records.map(r => ({ id: r.id, pgn: r.pgn, updated: r.updated })) }, null, 1);
+}
+
+// A .gm file is JSON; a .pgn file is imported into a new, unsaved document
+function parseDocText(text, name) {
+  const body = text.replace(/^﻿/, '').trim();
+  if (body.startsWith('{')) {
+    const data = JSON.parse(body);
+    if (!Array.isArray(data.records)) throw new Error(t('err_not_gm'));
+    const records = data.records.map(e => {
+      try { const p = parseRecordPGN(e.pgn); return { id: e.id || newId(), headers: p.headers, startFEN: p.startFEN, root: p.root, updated: e.updated, pgn: e.pgn, dirty: false }; }
+      catch (err) { return { id: e.id || newId(), pgn: e.pgn, updated: e.updated, broken: true, headers: blankHeaders({ Title: t('unparseable') }) }; }
+    });
+    return { records, lastOpen: data.lastOpen };
+  }
+  const saved = lib.records;
+  lib.records = [];
+  const res = importText(text, '', name);
+  const records = lib.records;
+  lib.records = saved;
+  if (!records.length) throw new Error(res.errors[0] || t('err_no_games'));
+  return { records, lastOpen: null };
+}
+
+function setDocument(records, path, name, lastOpen) {
+  lib.records = records;
+  doc.path = path; doc.name = name;
+  rec = null;
+  buildIndex();
+  const first = records.find(r => r.id === lastOpen && !r.broken) || records.find(r => !r.broken);
+  if (first) openRecord(first); else newRecord();
+  doc.dirty = false;
+  updateDocUI();
+}
+
+function openText(text, path, name) {
+  let parsed;
+  try { parsed = parseDocText(text, name); }
+  catch (e) { alert(t('open_failed', { name, error: e.message })); return false; }
+  const isPGN = /\.pgn$/i.test(name);
+  setDocument(parsed.records, isPGN ? null : path, baseName(name), parsed.lastOpen);
+  if (path && !isPGN) addRecent(path);
+  if (isPGN) { markDirty(); toast(t('pgn_opened'), 4000); }
+  return true;
+}
+
+const confirmDiscard = () => !doc.dirty || confirm(t('discard_q', { name: doc.name }));
+
+function newDocument(withSample = false) {
+  if (!confirmDiscard()) return;
+  setDocument(withSample ? [makeRecord(parseRecordPGN(SAMPLE))] : [], null, t('untitled'), null);
+}
+
+async function openDocument() {
+  if (!confirmDiscard()) return;
+  const f = await Backend.openDialog();
+  if (f) openText(f.text, f.path, f.name);
+}
+
+async function openPath(path, quiet = false) {
+  const text = await Backend.readFile(path);
+  if (text == null) {
+    if (!quiet) alert(t('not_found', { path }));
+    lib.prefs.recent = (lib.prefs.recent || []).filter(x => x !== path); scheduleSave();
+    return false;
+  }
+  return openText(text, path, fileName(path));
+}
+
+async function saveDocument(saveAs = false) {
+  const text = docText();
+  try {
+    if (doc.path && !saveAs) await Backend.writeFile(doc.path, text);
+    else {
+      const p = await Backend.saveDialog(safeName(doc.name) + '.gm', text);
+      if (!p) return false;
+      if (Backend.desktop) { doc.path = p; doc.name = baseName(p); addRecent(p); }
+    }
+  } catch (e) { alert(t('save_failed', { error: e })); return false; }
+  doc.dirty = false;
+  updateDocUI();
+  toast(t('saved'));
+  return true;
+}
+
+function addRecent(p) {
+  const list = (lib.prefs.recent || []).filter(x => x.toLowerCase() !== p.toLowerCase());
+  list.unshift(p);
+  lib.prefs.recent = list.slice(0, 8);
+  scheduleSave();
+}
+
+// ---------- Opening tree index ----------
+function buildIndex() {
+  const withVars = lib.prefs.treeVars !== false, onlyCat = lib.prefs.treeScope === 'cat';
+  const cat = rec ? rec.headers.Category : '';
+  const idx = new Map();
+  graphCache = null;
+  for (const r of lib.records) {
+    if (r.broken || (onlyCat && r.headers.Category !== cat)) continue;
+    const res = r.headers.Result;
+    const visit = node => {
+      const k = nodeKey(node);
+      let e = idx.get(k);
+      if (!e) { e = { recs: new Set(), moves: new Map() }; idx.set(k, e); }
+      e.recs.add(r);
+      const kids = withVars ? node.children : node.children.slice(0, 1);
+      for (const c of kids) {
+        let mv = e.moves.get(c.san);
+        if (!mv) { mv = { san: c.san, recs: new Set(), w: 0, d: 0, l: 0 }; e.moves.set(c.san, mv); }
+        if (!mv.recs.has(r)) {
+          mv.recs.add(r);
+          if (res === '1-0') mv.w++; else if (res === '0-1') mv.l++; else if (res === '1/2-1/2') mv.d++;
+        }
+        visit(c);
+      }
+    };
+    visit(r.root);
+  }
+  index = idx;
+}
+const scheduleIndex = debounce(() => { buildIndex(); renderTree(); }, 300);
+
+// ===================== Rendering =====================
+function renderBoard() {
+  const st = cur.st, flipped = !!lib.prefs.flipped;
+  const targets = new Set(selected !== null ? legalMoves(st).filter(m => m.from === selected).map(m => m.to) : []);
+  const checkSq = inCheck(st) ? kingSq(st.board, st.turn) : -1;
+  const last = cur.move;
+  const frag = document.createDocumentFragment();
+  for (let i = 0; i < 64; i++) {
+    const s = flipped ? 63 - i : i, r = s >> 3, f = s & 7;
+    const d = document.createElement('div');
+    d.className = 'sq ' + ((r + f) % 2 ? 'dark' : 'light');
+    d.dataset.sq = s;
+    if (last && (s === last.from || s === last.to)) d.classList.add('last');
+    if (s === selected) d.classList.add('sel');
+    if (s === checkSq) d.classList.add('check');
+    const p = st.board[s];
+    if (targets.has(s)) d.classList.add(p ? 'cap' : 'tgt');
+    if (p) {
+      const pe = document.createElement('div');
+      pe.className = 'piece ' + pieceClass(p);
+      d.appendChild(pe);
+    }
+    frag.appendChild(d);
+  }
+  boardEl.replaceChildren(frag);
+  $('#ranks').innerHTML = [...Array(8)].map((_, i) => `<span>${flipped ? i + 1 : 8 - i}</span>`).join('');
+  $('#files').innerHTML = [...Array(8)].map((_, i) => `<span>${FILES[flipped ? 7 - i : i]}</span>`).join('');
+  renderStatus();
+  engineFollow();
+}
+
+function renderStatus() {
+  const st = cur.st, legal = legalMoves(st), side = t(st.turn === 'w' ? 'white' : 'black');
+  let msg;
+  if (!legal.length) msg = inCheck(st) ? `<b>${t('checkmate', { side: t(st.turn === 'w' ? 'black' : 'white') })}</b>` : `<b>${t('stalemate')}</b>`;
+  else msg = `<b>${t('to_move', { side })}</b>` + (inCheck(st) ? ' · ' + t('check') : '');
+  const where = cur === rec.root ? t('start_position') : moveLabel(cur) + ' · ' + t(onMainline(cur) ? 'main_line' : 'variation');
+  const kids = cur.children.length;
+  const next = kids > 1 ? ' · ' + t('n_branches', { n: kids }) : '';
+  $('#status').innerHTML = `${msg} · ${where}${next}`;
+}
+
+function renderNotation() {
+  const box = $('#notation');
+  const keepScroll = box.scrollTop;
+  box.innerHTML = '';
+  let curEl = null;
+  const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const emit = (node, container, force, main) => {
+    if (node.pre) { container.append(mk('span', 'cmt', node.pre), ' '); force = true; }
+    const ps = node.parent.st;
+    const num = ps.turn === 'w' ? ps.full + '. ' : force ? ps.full + '… ' : '';
+    const moveNags = node.nags.filter(n => n <= 9).map(n => NAG_TEXT[n] || '').join('');
+    const posNags = node.nags.filter(n => n > 9).map(n => NAG_TEXT[n] || '').join(' ');
+    const sp = mk('span', 'mv' + (main ? ' main' : '') + (node === cur ? ' cur' : ''), num + node.san + moveNags + (posNags ? ' ' + posNags : ''));
+    sp._node = node;
+    if (node === cur) curEl = sp;
+    container.append(sp, ' ');
+    if (node.comment) { container.append(mk('span', 'cmt', node.comment), ' '); return true; }
+    return false;
+  };
+  // depth 0 = main line; variations at depth 0 and 1 get their own indented block, deeper ones go inline in parentheses
+  const walk = (node, depth, sink, force) => {
+    while (node.children.length) {
+      const main = node.children[0];
+      let f = emit(main, sink.cur, force, depth === 0);
+      const vars = node.children.slice(1);
+      if (vars.length) {
+        if (depth < 2) {
+          for (const v of vars) {
+            const blk = mk('div', 'var');
+            sink.box.append(blk);
+            const sub = { box: blk, cur: mk('div', 'line') };
+            blk.append(sub.cur);
+            walk(v, depth + 1, sub, emit(v, sub.cur, true, false));
+          }
+          sink.cur = mk('div', 'line');
+          sink.box.append(sink.cur);
+        } else {
+          for (const v of vars) {
+            const sp = mk('span', 'var-inline', '( ');
+            sink.cur.append(sp);
+            const sub = { box: sp, cur: sp };
+            walk(v, depth + 1, sub, emit(v, sp, true, false));
+            sp.append(') ');
+          }
+        }
+        f = true;
+      }
+      force = f;
+      node = main;
+    }
+  };
+  if (rec.root.comment) box.append(mk('div', 'cmt intro', rec.root.comment));
+  const sink = { box, cur: mk('div', 'line') };
+  box.append(sink.cur);
+  walk(rec.root, 0, sink, true);
+  if (!rec.root.children.length) box.append(mk('div', 'empty', t('empty_notation')));
+  box.scrollTop = keepScroll;
+  if (curEl) {
+    const top = curEl.offsetTop - box.offsetTop, bottom = top + curEl.offsetHeight;
+    if (top < box.scrollTop) box.scrollTop = top - 20;
+    else if (bottom > box.scrollTop + box.clientHeight) box.scrollTop = bottom - box.clientHeight + 20;
+  } else if (cur === rec.root) box.scrollTop = 0;
+}
+const renderNotationSoon = debounce(renderNotation, 250);
+
+const NAG_BUTTONS = [1, 2, 3, 4, 5, 6, null, 18, 16, 14, 10, 13, 15, 17, 19];
+function renderComment() {
+  const ta = $('#comment');
+  const atRoot = cur === rec.root;
+  ta.placeholder = atRoot ? t('root_notes_ph') : t('comment_on', { move: moveLabel(cur) });
+  const v = atRoot ? rec.root.comment : cur.comment;
+  if (ta.value !== v) ta.value = v;
+  const bar = $('#nagBar');
+  bar.innerHTML = '';
+  if (atRoot) { bar.innerHTML = `<span class="lbl">${t('root_notes_bar')}</span>`; return; }
+  for (const b of NAG_BUTTONS) {
+    if (!b) { bar.append(Object.assign(document.createElement('span'), { className: 'gap' })); continue; }
+    const n = b, tip = t('nag_' + n);
+    const btn = document.createElement('button');
+    btn.textContent = NAG_TEXT[n]; btn.title = tip;
+    if (cur.nags.includes(n)) btn.classList.add('on');
+    btn.onclick = () => toggleNag(n);
+    bar.append(btn);
+  }
+}
+
+function toggleNag(n) {
+  if (cur === rec.root) return;
+  const group = n <= 9 ? x => x <= 9 : x => x > 9;
+  const had = cur.nags.includes(n);
+  cur.nags = cur.nags.filter(x => !group(x));
+  if (!had) cur.nags.push(n);
+  cur.nags.sort((a, b) => a - b);
+  touch(); renderNotation(); renderComment();
+}
+
+function renderInfo() {
+  $('#title').value = rec.headers.Title || '';
+  $('#category').value = rec.headers.Category || '';
+  for (const inp of document.querySelectorAll('[data-h]')) inp.value = rec.headers[inp.dataset.h] || (inp.tagName === 'SELECT' ? '*' : '');
+}
+
+function renderLibrary() {
+  const q = $('#search').value.trim().toLowerCase();
+  const collapsed = new Set(lib.prefs.collapsed || []);
+  const groups = new Map();
+  for (const r of lib.records) {
+    const h = r.headers;
+    if (q && ![recTitle(r), h.Category, h.White, h.Black, h.Event].join(' ').toLowerCase().includes(q)) continue;
+    const c = h.Category || '';
+    if (!groups.has(c)) groups.set(c, []);
+    groups.get(c).push(r);
+  }
+  const cats = [...groups.keys()].sort((a, b) => (a === '') - (b === '') || a.localeCompare(b, 'zh'));
+  const box = $('#libList');
+  box.innerHTML = '';
+  if (!cats.length) box.innerHTML = `<div class="empty" style="padding:10px">${q ? t('no_match') : t('lib_empty')}</div>`;
+  for (const c of cats) {
+    const g = document.createElement('div');
+    g.className = 'cat' + (collapsed.has(c) && !q ? ' closed' : '');
+    const head = document.createElement('div');
+    head.className = 'cat-head';
+    head.innerHTML = `<span class="arrow">▾</span><span></span><span class="count">${groups.get(c).length}</span>`;
+    head.children[1].textContent = c || t('uncategorized');
+    head.onclick = () => {
+      collapsed.has(c) ? collapsed.delete(c) : collapsed.add(c);
+      lib.prefs.collapsed = [...collapsed]; scheduleSave(); renderLibrary();
+    };
+    const body = document.createElement('div');
+    body.className = 'cat-body';
+    for (const r of groups.get(c).sort((a, b) => recTitle(a).localeCompare(recTitle(b), 'zh'))) {
+      const it = document.createElement('div');
+      it.className = 'rec-item' + (r === rec ? ' active' : '');
+      const titleEl = document.createElement('div'); titleEl.className = 't'; titleEl.textContent = (r.broken ? '⚠ ' : '') + recTitle(r);
+      const meta = document.createElement('div'); meta.className = 'meta';
+      if (r.broken) meta.textContent = t('broken_meta');
+      else {
+        const vc = variationCount(r.root), h = r.headers;
+        meta.textContent = [t('n_moves', { n: Math.ceil(mainlineLength(r) / 2) }), vc ? t('n_variations', { n: vc }) : '', h.Result !== '*' ? h.Result : '',
+          h.Title && (h.White || h.Black) ? `${h.White || '?'} – ${h.Black || '?'}` : ''].filter(Boolean).join(' · ');
+      }
+      const more = document.createElement('button'); more.className = 'more'; more.textContent = '⋯'; more.title = t('more_actions');
+      more.onclick = e => { e.stopPropagation(); recordMenu(r, e.clientX, e.clientY); };
+      it.append(titleEl, meta, more);
+      it.onclick = () => openRecord(r);
+      it.oncontextmenu = e => { e.preventDefault(); recordMenu(r, e.clientX, e.clientY); };
+      body.append(it);
+    }
+    g.append(head, body);
+    box.append(g);
+  }
+  const allCats = [...new Set(lib.records.map(r => r.headers.Category).filter(Boolean))].sort();
+  $('#catList').innerHTML = allCats.map(c => `<option value="${c.replace(/"/g, '&quot;')}">`).join('');
+}
+const renderLibrarySoon = debounce(renderLibrary, 300);
+
+function renderTree() {
+  const box = $('#tree'), recBox = $('#treeRecs');
+  if (!rec) return;
+  const e = index.get(nodeKey(cur));
+  const rows = e ? [...e.moves.values()].sort((a, b) => b.recs.size - a.recs.size || a.san.localeCompare(b.san)) : [];
+  if (!rows.length) box.innerHTML = `<div class="empty">${t('tree_none')}</div>`;
+  else {
+    const here = new Set(cur.children.map(c => c.san));
+    let html = `<table class="tree-table"><tr><th>${t('th_move')}</th><th class="num">${t('th_records')}</th><th>${t('th_results')}</th></tr>`;
+    for (const mv of rows) {
+      const n = mv.w + mv.d + mv.l;
+      const pct = x => (x / n * 100).toFixed(0);
+      const bar = n ? `<div class="bar" title="${t('bar_tip', { w: mv.w, d: mv.d, l: mv.l, n })}"><span class="w" style="width:${pct(mv.w)}%"></span><span class="d" style="width:${pct(mv.d)}%"></span><span class="l" style="width:${pct(mv.l)}%"></span></div>`
+        : `<span class="hint">${t('no_results')}</span>`;
+      html += `<tr class="row" data-san="${mv.san}"><td class="san${here.has(mv.san) ? ' inrec' : ''}">${mv.san}</td><td class="num">${mv.recs.size}</td><td>${bar}</td></tr>`;
+    }
+    box.innerHTML = html + '</table>';
+  }
+  recBox.innerHTML = '';
+  const others = e ? [...e.recs].filter(r => r !== rec) : [];
+  if (others.length) {
+    recBox.append(t('also_in', { n: others.length }), document.createElement('br'));
+    for (const r of others.slice(0, 40)) {
+      const a = document.createElement('a');
+      a.textContent = recTitle(r);
+      a.onclick = () => openAtPosition(r, nodeKey(cur));
+      recBox.append(a);
+    }
+  }
+  renderGraph();
+}
+
+function renderAll() {
+  renderBoard(); renderNotation(); renderComment(); renderInfo(); renderLibrary(); renderTree();
+}
+
+// ===================== Actions =====================
+function goTo(node) {
+  if (!node) return;
+  cur = node; selected = null;
+  renderBoard(); renderNotation(); renderComment(); renderTree();
+}
+
+function playMove(m) {
+  const legal = legalMoves(cur.st);
+  const existed = cur.children.some(c => sameMove(c.move, m));
+  const isVariation = !existed && cur.children.length > 0;
+  const child = addChild(cur, m, legal);
+  if (!existed) {
+    // Fill in the result automatically when the main line ends in mate or stalemate
+    if (onMainline(child) && !child.children.length && rec.headers.Result === '*' && !legalMoves(child.st).length)
+      rec.headers.Result = inCheck(child.st) ? (child.st.turn === 'w' ? '0-1' : '1-0') : '1/2-1/2';
+    touch();
+    renderLibrarySoon();
+    if (isVariation) toast(t('new_variation'));
+  }
+  goTo(child);
+  if (!existed) renderInfo();
+}
+
+async function playCandidates(cands) {
+  let m = cands[0];
+  if (cands.length > 1) {
+    const pr = await askPromo(cur.st.turn);
+    if (!pr) { selected = null; renderBoard(); return; }
+    m = cands.find(x => x.promo === pr);
+  }
+  selected = null;
+  playMove(m);
+}
+
+function playSAN(san) {
+  const legal = legalMoves(cur.st);
+  const m = legal.find(x => toSAN(cur.st, x, legal) === san);
+  if (m) playMove(m);
+}
+
+function askPromo(color) {
+  const dlg = $('#promoDlg'), row = $('#promoRow');
+  row.innerHTML = '';
+  for (const p of 'QRBN') {
+    const b = document.createElement('button');
+    b.value = p.toLowerCase();
+    b.innerHTML = `<div class="p-${color}${p}"></div>`;
+    row.appendChild(b);
+  }
+  return new Promise(res => {
+    dlg.addEventListener('close', () => res(dlg.returnValue), { once: true });
+    dlg.returnValue = '';
+    dlg.showModal();
+  });
+}
+
+// ---------- Move context menu ----------
+function promoteFull(node) {
+  for (let n = node; n.parent; n = n.parent) {
+    const sib = n.parent.children, i = sib.indexOf(n);
+    if (i > 0) { sib.splice(i, 1); sib.unshift(n); }
+  }
+}
+function promoteOne(node) {
+  for (let n = node; n.parent; n = n.parent) {
+    const sib = n.parent.children, i = sib.indexOf(n);
+    if (i > 0) { [sib[i - 1], sib[i]] = [sib[i], sib[i - 1]]; return; }
+  }
+}
+function deleteFrom(node) {
+  const sib = node.parent.children;
+  sib.splice(sib.indexOf(node), 1);
+  if (isAncestor(node, cur)) cur = node.parent;
+}
+
+function moveMenu(node, x, y) {
+  const main = onMainline(node);
+  showMenu(x, y, [
+    { label: t('m_promote'), disabled: main, action: () => { promoteFull(node); touch(); renderNotation(); renderStatus(); } },
+    { label: t('m_up'), disabled: main, action: () => { promoteOne(node); touch(); renderNotation(); renderStatus(); } },
+    '-',
+    { label: t('m_edit_comment'), action: () => { goTo(node); $('#comment').focus(); } },
+    { label: t('m_pre'), action: () => {
+      const v = prompt(t('pre_prompt'), node.pre);
+      if (v !== null) { node.pre = v.trim(); touch(); renderNotation(); }
+    } },
+    '-',
+    { label: t('m_del_after'), disabled: !node.children.length, action: () => {
+      if (isAncestor(node, cur) && cur !== node) cur = node;
+      node.children = []; touch(); renderAll();
+    } },
+    { label: t('m_del', { move: moveLabel(node) }), danger: true, action: () => {
+      const n = countNodes(node);
+      if (n > 6 && !confirm(t('del_confirm', { n }))) return;
+      deleteFrom(node); touch(); renderAll();
+    } },
+  ]);
+}
+function countNodes(n) { let c = 1; for (const k of n.children) c += countNodes(k); return c; }
+
+function showMenu(x, y, items) {
+  const m = $('#menu');
+  m.innerHTML = '';
+  for (const it of items) {
+    if (it === '-') { m.append(document.createElement('hr')); continue; }
+    const b = document.createElement('button');
+    b.textContent = it.label;
+    if (it.hint) { const k = document.createElement('span'); k.className = 'kbd'; k.textContent = it.hint; b.append(k); }
+    if (it.title) b.title = it.title;
+    if (it.danger) b.className = 'danger';
+    b.disabled = !!it.disabled;
+    b.onclick = () => { hideMenu(); it.action(); };
+    m.append(b);
+  }
+  m.style.display = 'block';
+  const w = m.offsetWidth, h = m.offsetHeight;
+  m.style.left = Math.min(x, innerWidth - w - 6) + 'px';
+  m.style.top = Math.min(y, innerHeight - h - 6) + 'px';
+}
+function hideMenu() { $('#menu').style.display = 'none'; }
+
+// ---------- Library actions ----------
+function openRecord(r, node = null) {
+  if (r.broken) { alert(t('broken_alert')); return; }
+  rec = r; cur = node || r.root; selected = null;
+  lib.prefs.lastOpen = r.id;
+  if (lib.prefs.treeScope === 'cat') buildIndex();
+  renderAll();
+}
+
+function openAtPosition(r, key) {
+  let found = null;
+  const dfs = n => { if (found) return; if (nodeKey(n) === key) { found = n; return; } for (const c of n.children) dfs(c); };
+  dfs(r.root);
+  openRecord(r, found);
+}
+
+function newRecord() {
+  const n = lib.records.filter(r => r.headers.Title.startsWith(t('untitled'))).length + 1;
+  const r = makeRecord({ headers: blankHeaders({ Title: t('untitled_n', { n }), Category: rec ? rec.headers.Category : '' }),
+    startFEN: START_FEN, root: mkNode(null, null, fromFEN(START_FEN)) });
+  lib.records.push(r);
+  openRecord(r);
+  markDirty(); buildIndex(); renderTree();
+  $('#title').select();
+}
+
+function duplicateRecord(r) {
+  const p = parseRecordPGN(r.pgn || recordToPGN(r));
+  p.headers.Title = recTitle(r) + t('copy_suffix');
+  const copy = makeRecord(p);
+  lib.records.push(copy);
+  openRecord(copy);
+  markDirty(); scheduleIndex();
+}
+
+function deleteRecord(r) {
+  if (!confirm(t('del_record_q', { title: recTitle(r) }))) return;
+  lib.records.splice(lib.records.indexOf(r), 1);
+  if (rec === r) {
+    const next = lib.records.find(x => !x.broken);
+    if (next) openRecord(next); else newRecord();
+  }
+  markDirty(); buildIndex(); renderAll();
+}
+
+function recordMenu(r, x, y) {
+  showMenu(x, y, [
+    { label: t('m_open'), action: () => openRecord(r) },
+    { label: t('m_duplicate'), disabled: !!r.broken, action: () => duplicateRecord(r) },
+    { label: t('m_export_pgn'), action: () => exportRecords([r], recTitle(r)) },
+    '-',
+    { label: t('m_delete'), danger: true, action: () => deleteRecord(r) },
+  ]);
+}
+
+const safeName = s => (s || 'grandmist').replace(/[\\/:*?"<>|]+/g, '_').trim().slice(0, 80);
+async function exportRecords(list, name) {
+  if (!list.length) { toast(t('nothing_export')); return; }
+  for (const r of list) if (!r.broken && (r.dirty || !r.pgn)) { r.pgn = recordToPGN(r); r.dirty = false; }
+  const text = list.map(r => r.pgn.trim()).join('\n\n') + '\n';
+  const path = await Backend.exportFile(safeName(name) + '.pgn', text);
+  if (path) toast(t('exported', { n: list.length }));
+}
+
+function importText(text, fallbackCat, fileName) {
+  const parts = splitPGN(text), added = [], errors = [];
+  let warnCount = 0;
+  parts.forEach((p, i) => {
+    try {
+      const parsed = parseRecordPGN(p);
+      warnCount += parsed.warnings.length;
+      const h = parsed.headers;
+      if (!h.Category && fallbackCat) h.Category = fallbackCat;
+      if (!h.Title && !h.White && !h.Black && !h.Event) h.Title = (fileName ? fileName.replace(/\.\w+$/, '') : t('imported_title')) + (parts.length > 1 ? ` #${i + 1}` : '');
+      const r = makeRecord(parsed);
+      lib.records.push(r);
+      added.push(r);
+    } catch (e) { errors.push((fileName ? fileName + ' ' : '') + t('game_err', { i: i + 1, error: e.message })); }
+  });
+  return { added, errors, warnCount };
+}
+
+function finishImport(results) {
+  const added = results.flatMap(r => r.added), errors = results.flatMap(r => r.errors);
+  const warns = results.reduce((s, r) => s + r.warnCount, 0);
+  if (added.length) { openRecord(added[0]); markDirty(); buildIndex(); renderAll(); }
+  let msg = t('imported', { n: added.length });
+  if (warns) msg += ` (${t('skipped_vars', { n: warns })})`;
+  if (errors.length) alert(msg + '.\n' + t('import_errors', { n: errors.length }) + '\n' + errors.slice(0, 20).join('\n') + (errors.length > 20 ? '\n…' : ''));
+  else toast(msg, 3000);
+}
+
+async function importFromFiles() {
+  const files = await Backend.pickFiles();
+  if (!files || !files.length) return;
+  finishImport(files.map(f => importText(f.text, f.name.replace(/\.\w+$/, ''), f.name)));
+}
+
+function setStartFEN() {
+  if (rec.root.children.length) { alert(t('fen_only_empty')); return; }
+  const fen = prompt(t('fen_prompt'), rec.startFEN);
+  if (!fen || fen.trim() === rec.startFEN) return;
+  try {
+    const st = fromFEN(fen.trim());
+    if (kingSq(st.board, 'w') < 0 || kingSq(st.board, 'b') < 0) throw new Error(t('err_kings'));
+    rec.startFEN = fen.trim();
+    const comment = rec.root.comment;
+    rec.root = mkNode(null, null, st);
+    rec.root.comment = comment;
+    cur = rec.root;
+    touch(); renderAll();
+  } catch (e) { alert(t('invalid_fen', { error: e.message })); }
+}
+
+// ---------- Board size ----------
+function applyScale() {
+  if (graphOn()) return;
+  let sq = lib.prefs.sq || 64;
+  if (lib.prefs.autoFit !== false) {
+    const c = $('.center');
+    const availH = c.clientHeight - 24 - $('.board-tools').offsetHeight - $('.nav').offsetHeight - $('#status').offsetHeight - 3 * 10 - 30;
+    const availW = c.clientWidth - 40 - 30;
+    sq = Math.max(32, Math.min(130, Math.floor(Math.min(availH, availW) / 8)));
+  }
+  document.documentElement.style.setProperty('--sq', sq + 'px');
+  $('#scale').value = sq;
+}
+
+// ===================== Events =====================
+let drag = null;
+boardEl.addEventListener('pointerdown', e => {
+  if (e.button !== 0) return;
+  const sqEl = e.target.closest('.sq');
+  if (!sqEl) return;
+  const s = +sqEl.dataset.sq, st = cur.st;
+  if (selected !== null && selected !== s) {
+    const cands = legalMoves(st).filter(m => m.from === selected && m.to === s);
+    if (cands.length) { e.preventDefault(); playCandidates(cands); return; }
+  }
+  const p = st.board[s];
+  if (p && colorOf(p) === st.turn) {
+    const wasSelected = selected === s;
+    selected = s;
+    renderBoard();
+    const pieceEl = boardEl.querySelector(`[data-sq="${s}"] .piece`);
+    const size = pieceEl.getBoundingClientRect().width;
+    const ghost = document.createElement('div');
+    ghost.className = 'ghost ' + pieceClass(p);
+    Object.assign(ghost.style, { width: size + 'px', height: size + 'px', left: e.clientX - size / 2 + 'px', top: e.clientY - size / 2 + 'px', display: 'none' });
+    document.body.append(ghost);
+    drag = { from: s, ghost, pieceEl, wasSelected, moved: false, x0: e.clientX, y0: e.clientY, size };
+    boardEl.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  } else { selected = null; renderBoard(); }
+});
+boardEl.addEventListener('pointermove', e => {
+  if (!drag) return;
+  if (!drag.moved && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) > 4) {
+    drag.moved = true; drag.ghost.style.display = 'block'; drag.pieceEl.classList.add('dragging');
+  }
+  drag.ghost.style.left = e.clientX - drag.size / 2 + 'px';
+  drag.ghost.style.top = e.clientY - drag.size / 2 + 'px';
+});
+function endDrag(e, cancel) {
+  if (!drag) return;
+  const d = drag; drag = null;
+  d.ghost.remove();
+  if (!cancel && d.moved) {
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const sqEl = el && el.closest('#board .sq');
+    if (sqEl && +sqEl.dataset.sq !== d.from) {
+      const cands = legalMoves(cur.st).filter(m => m.from === d.from && m.to === +sqEl.dataset.sq);
+      if (cands.length) { playCandidates(cands); return; }
+    }
+  } else if (!cancel && d.wasSelected) selected = null; // clicking the selected piece again deselects it
+  renderBoard();
+}
+boardEl.addEventListener('pointerup', e => endDrag(e, false));
+boardEl.addEventListener('pointercancel', e => endDrag(e, true));
+boardEl.addEventListener('contextmenu', e => { e.preventDefault(); selected = null; renderBoard(); });
+
+$('#notation').addEventListener('click', e => { const el = e.target.closest('.mv'); if (el) goTo(el._node); });
+$('#notation').addEventListener('contextmenu', e => {
+  const el = e.target.closest('.mv');
+  if (!el) return;
+  e.preventDefault();
+  moveMenu(el._node, e.clientX, e.clientY);
+});
+$('#tree').addEventListener('click', e => { const tr = e.target.closest('tr[data-san]'); if (tr) playSAN(tr.dataset.san); });
+
+$('#comment').addEventListener('input', e => {
+  if (cur === rec.root) rec.root.comment = e.target.value; else cur.comment = e.target.value;
+  touch(); renderNotationSoon();
+});
+$('#title').addEventListener('input', e => { rec.headers.Title = e.target.value.trim(); touch(); renderLibrarySoon(); });
+$('#category').addEventListener('input', e => { rec.headers.Category = e.target.value.trim(); touch(); renderLibrarySoon(); });
+for (const inp of document.querySelectorAll('[data-h]')) {
+  inp.addEventListener(inp.tagName === 'SELECT' ? 'change' : 'input', () => { rec.headers[inp.dataset.h] = inp.value.trim(); touch(); renderLibrarySoon(); });
+}
+$('#btnFEN').onclick = setStartFEN;
+
+$('#search').addEventListener('input', renderLibrarySoon);
+$('#btnNew').onclick = newRecord;
+$('#btnImport').onclick = e => {
+  const r = e.target.getBoundingClientRect();
+  showMenu(r.left, r.bottom + 4, [
+    { label: t('m_from_files'), action: importFromFiles },
+    { label: t('import_online'), action: openOnlineDialog },
+    { label: t('m_paste'), action: () => { $('#pasteText').value = ''; $('#pasteCat').value = rec ? rec.headers.Category : ''; $('#pasteDlg').showModal(); } },
+  ]);
+};
+$('#pasteDlg').addEventListener('close', () => {
+  if ($('#pasteDlg').returnValue !== 'ok') return;
+  const text = $('#pasteText').value.trim();
+  if (text) finishImport([importText(text, $('#pasteCat').value.trim(), '')]);
+});
+$('#btnExport').onclick = e => {
+  const r = e.target.getBoundingClientRect(), cat = rec ? rec.headers.Category : '';
+  showMenu(r.left, r.bottom + 4, [
+    { label: t('m_export_record'), disabled: !rec, action: () => exportRecords([rec], recTitle(rec)) },
+    { label: t('m_export_cat', { cat: cat || t('uncategorized') }), disabled: !rec, action: () => exportRecords(lib.records.filter(x => (x.headers.Category || '') === cat), cat || t('uncategorized')) },
+    { label: t('m_export_all'), action: () => exportRecords(lib.records, 'grandmist-library') },
+  ]);
+};
+$('#showFile').onclick = () => Backend.showInFolder(doc.path);
+$('#btnLang').onclick = e => {
+  const r = e.target.getBoundingClientRect();
+  const langs = Object.keys(I18N.packs).sort((a, b) => (a !== 'en') - (b !== 'en') || a.localeCompare(b));
+  showMenu(r.left, r.bottom + 4, [
+    ...langs.map(c => ({ label: (c === I18N.code ? '✓ ' : '   ') + (I18N.packs[c]._language || c), hint: c, action: () => setLanguage(c) })),
+    ...(Backend.desktop ? ['-', { label: t('lang_folder'), action: () => Backend.api.open_lang_folder() }] : []),
+  ]);
+};
+$('#btnFile').onclick = e => {
+  const r = e.target.getBoundingClientRect();
+  const recent = (lib.prefs.recent || []).filter(p => p !== doc.path);
+  showMenu(r.left, r.bottom + 4, [
+    { label: t('m_new_file'), hint: 'Ctrl+N', action: () => newDocument() },
+    { label: t('m_open_file'), hint: 'Ctrl+O', action: openDocument },
+    { label: t('m_save'), hint: 'Ctrl+S', action: () => saveDocument() },
+    { label: t('m_save_as'), hint: 'Ctrl+Shift+S', action: () => saveDocument(true) },
+    '-',
+    { label: t('import_online'), action: openOnlineDialog },
+    ...(recent.length ? ['-', ...recent.map(p => ({ label: fileName(p), title: p, action: () => { if (confirmDiscard()) openPath(p); } }))] : []),
+  ]);
+};
+document.addEventListener('keydown', e => {
+  if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+  const k = e.key.toLowerCase();
+  if (k === 's') saveDocument(e.shiftKey);
+  else if (k === 'o') openDocument();
+  else if (k === 'n') newDocument();
+  else return;
+  e.preventDefault();
+});
+
+$('#btnFirst').onclick = () => goTo(rec.root);
+$('#btnPrev').onclick = () => goTo(cur.parent);
+$('#btnNext').onclick = () => goTo(cur.children[0]);
+$('#btnLast').onclick = () => { let n = cur; while (n.children.length) n = n.children[0]; goTo(n); };
+$('#btnFlip').onclick = () => { lib.prefs.flipped = !lib.prefs.flipped; scheduleSave(); renderBoard(); };
+$('#scale').addEventListener('input', e => { lib.prefs.sq = +e.target.value; lib.prefs.autoFit = false; applyScale(); scheduleSave(); });
+$('#btnFit').onclick = () => { lib.prefs.autoFit = true; applyScale(); scheduleSave(); };
+window.addEventListener('resize', debounce(applyScale, 100));
+
+$('#treeVars').addEventListener('change', e => { lib.prefs.treeVars = e.target.checked; scheduleSave(); buildIndex(); renderTree(); });
+$('#treeScope').addEventListener('change', e => { lib.prefs.treeScope = e.target.value; scheduleSave(); buildIndex(); renderTree(); });
+
+document.addEventListener('pointerdown', e => { if (!e.target.closest('#menu')) hideMenu(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { hideMenu(); selected = null; renderBoard(); return; }
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || document.querySelector('dialog[open]') || !rec) return;
+  const sibStep = d => { if (!cur.parent) return; const s = cur.parent.children, i = s.indexOf(cur); goTo(s[(i + d + s.length) % s.length]); };
+  if (e.key === 'ArrowLeft') goTo(cur.parent);
+  else if (e.key === 'ArrowRight') goTo(cur.children[0]);
+  else if (e.key === 'ArrowUp') sibStep(-1);
+  else if (e.key === 'ArrowDown') sibStep(1);
+  else if (e.key === 'Home') goTo(rec.root);
+  else if (e.key === 'End') $('#btnLast').onclick();
+  else if (e.key === 'f' || e.key === 'F') $('#btnFlip').onclick();
+  else if (e.key === 'g' || e.key === 'G') setView(graphOn() ? 'board' : 'graph');
+  else if (e.key === ' ') toggleEngine();
+  else return;
+  e.preventDefault();
+});
+// The desktop app asks about unsaved changes itself (main.py); this covers the browser
+window.addEventListener('beforeunload', e => { if (doc.dirty && !Backend.desktop) e.preventDefault(); });
+
+// ===================== Tree graph: every branch of the current record drawn as a real tree =====================
+let graphCache = null, graphNodes = []; // graphCache is reset by buildIndex but no longer used here
+const gEl = $('#graph');
+function graphOn() { return document.body.classList.contains('graph-mode'); }
+
+function setView(v) {
+  document.body.classList.toggle('graph-mode', v === 'graph');
+  $('#vBoard').classList.toggle('on', v !== 'graph');
+  $('#vGraph').classList.toggle('on', v === 'graph');
+  $('#peek').style.display = 'none';
+  if (lib.prefs.view !== v) { lib.prefs.view = v; scheduleSave(); }
+  if (v === 'graph') renderGraph(); else applyScale();
+}
+
+const graphLabel = n => {
+  if (!n.parent) return t('start');
+  const ps = n.parent.st;
+  return (ps.turn === 'w' ? ps.full + '.' : ps.full + '…') + n.san + n.nags.filter(x => x <= 9).map(x => NAG_TEXT[x]).join('');
+};
+
+// "Whole file": every record in the file merged by move sequence, all variations included.
+// Merged nodes point back to a real node (preferring the open record) so clicks can jump there.
+function mergedTree() {
+  const mk = (san, parent, real, r) => ({ san, parent, st: real.st, children: [], nags: real.nags, comment: '', ref: real, refRec: r, count: 0, map: new Map() });
+  const root = mk(null, null, rec.root, rec);
+  const add = (real, m, r) => {
+    m.count++;
+    if (r === rec && m.refRec !== rec) { m.ref = real; m.refRec = rec; }
+    for (const c of real.children) {
+      let mc = m.map.get(c.san);
+      if (!mc) { mc = mk(c.san, m, c, r); m.map.set(c.san, mc); m.children.push(mc); }
+      add(c, mc, r);
+    }
+  };
+  for (const r of lib.records) if (!r.broken && r.startFEN === rec.startFEN) add(r.root, root, r);
+  const sort = m => { m.children.sort((a, b) => b.count - a.count); m.children.forEach(sort); };
+  sort(root);
+  return root;
+}
+
+function renderGraph() {
+  if (!graphOn() || !rec) return;
+  const maxD = +(lib.prefs.gDepth || 10), z = lib.prefs.gZoom || 1, fileMode = lib.prefs.gScope === 'file';
+  const root = fileMode ? mergedTree() : rec.root;
+  // Path of the current position (highlighted) and the node standing for the current position
+  const onPath = new Set();
+  let curNode = cur;
+  if (fileMode) {
+    const path = [];
+    for (let n = cur; n.parent; n = n.parent) path.unshift(n.san);
+    curNode = root;
+    onPath.add(root);
+    for (const san of path) { curNode = curNode.children.find(c => c.san === san); if (!curNode) break; onPath.add(curNode); }
+  } else for (let n = cur; n; n = n.parent) onPath.add(n);
+  // Layout: one column per ply, leaves stacked top to bottom, parents centred on their children
+  const nodes = [], links = [];
+  let rows = 0, depthMax = 0;
+  const place = (n, depth, main) => {
+    n._gd = depth; n._gm = main;
+    const kids = n.children.filter(c => depth < maxD || onPath.has(c));
+    n._gh = n.children.length - kids.length;
+    if (!kids.length) n._gy = rows++;
+    else {
+      kids.forEach(c => place(c, depth + 1, main && n.children[0] === c));
+      n._gy = (kids[0]._gy + kids[kids.length - 1]._gy) / 2;
+      for (const k of kids) links.push([n, k]);
+    }
+    depthMax = Math.max(depthMax, depth);
+    nodes.push(n);
+  };
+  place(root, 0, true);
+  const CW = 92 * z, RH = 28 * z, NW = 70 * z, NH = 20 * z, P = 16, fs = 11 * z;
+  const X = n => P + n._gd * CW, Y = n => P + n._gy * RH;
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${P * 2 + depthMax * CW + NW + 30 * z}" height="${P * 2 + Math.max(rows, 1) * RH}">`;
+  for (const [a, b] of links) {
+    const x1 = X(a) + NW, y1 = Y(a) + NH / 2, x2 = X(b), y2 = Y(b) + NH / 2, mx = (x1 + x2) / 2;
+    // record: the main line is thicker; whole file: thicker = more records follow this move
+    const w = (fileMode ? 1 + 4 * b.count / root.count : b._gm ? 3 : 1.4) * Math.sqrt(z);
+    svg += `<path class="g-link${onPath.has(b) ? ' on' : ''}" stroke-width="${w.toFixed(2)}" d="M${x1},${y1}C${mx},${y1} ${mx},${y2} ${x2},${y2}"/>`;
+  }
+  nodes.forEach((n, i) => {
+    const cls = 'g-node' + (n.parent ? (n.parent.st.turn === 'w' ? ' w' : ' b') : '') + (n._gm ? ' main' : '') +
+      (onPath.has(n) ? ' on' : '') + (n === curNode ? ' cur' : '');
+    svg += `<g class="${cls}" data-i="${i}" transform="translate(${X(n)},${Y(n)})"><rect width="${NW}" height="${NH}" rx="${3 * z}"/>` +
+      `<text x="${NW / 2}" y="${NH / 2}" font-size="${fs}" text-anchor="middle" dominant-baseline="central">${graphLabel(n)}</text>`;
+    if ((n.ref || n).comment) svg += `<circle class="g-dot" cx="${NW - 3 * z}" cy="${3 * z}" r="${2.5 * z}"/>`; // has a comment
+    if (n._gh) svg += `<text class="g-more" x="${NW + 4 * z}" y="${NH / 2}" font-size="${fs * .85}" dominant-baseline="central">+${n._gh}</text>`;
+    svg += '</g>';
+  });
+  graphNodes = nodes;
+  gEl.innerHTML = svg + '</svg>';
+  $('#graphInfo').textContent = fileMode ? doc.name + '.gm · ' + t('n_records', { n: root.count })
+    : recTitle(rec) + ' · ' + t('n_variations', { n: variationCount(rec.root) });
+  if (!curNode) return;
+  const cx = X(curNode), cy = Y(curNode); // scroll the current node into view
+  if (cx < gEl.scrollLeft || cx + NW > gEl.scrollLeft + gEl.clientWidth) gEl.scrollLeft = cx - gEl.clientWidth / 2;
+  if (cy < gEl.scrollTop || cy + NH > gEl.scrollTop + gEl.clientHeight) gEl.scrollTop = cy - gEl.clientHeight / 2;
+}
+
+function setGraphZoom(z) { lib.prefs.gZoom = Math.max(.4, Math.min(2.5, Math.round(z * 10) / 10)); scheduleSave(); renderGraph(); }
+
+gEl.addEventListener('click', e => {
+  const g = e.target.closest('.g-node');
+  if (!g) return;
+  const n = graphNodes[+g.dataset.i];
+  if (!n.ref || n.refRec === rec) { goTo(n.ref || n); return; }
+  openRecord(n.refRec, n.ref);
+  toast(t('opened_rec', { title: recTitle(n.refRec) }));
+});
+gEl.addEventListener('mousemove', e => {
+  const g = e.target.closest('.g-node'), pk = $('#peek');
+  if (!g) { pk.style.display = 'none'; return; }
+  const n = graphNodes[+g.dataset.i];
+  if (pk._n !== n) { // hover preview of this node's position
+    pk._n = n;
+    const st = n.st, fl = !!lib.prefs.flipped;
+    let html = '<div class="mb">';
+    for (let i = 0; i < 64; i++) {
+      const s = fl ? 63 - i : i, p = st.board[s];
+      html += `<div class="${p ? pieceClass(p) : ''}" style="background-color:var(--${((s >> 3) + (s & 7)) % 2 ? 'dark' : 'light'})"></div>`;
+    }
+    pk.innerHTML = html + '</div><div class="cap"></div>';
+    const real = n.ref || n, c = real.comment || real.pre;
+    pk.querySelector('.cap').textContent = graphLabel(n) + (n.count ? ' · ' + t('n_records', { n: n.count }) : '') + (c ? ' · ' + (c.length > 80 ? c.slice(0, 80) + '…' : c) : '');
+  }
+  pk.style.display = 'block';
+  const w = pk.offsetWidth, h = pk.offsetHeight;
+  pk.style.left = Math.min(e.clientX + 16, innerWidth - w - 8) + 'px';
+  pk.style.top = Math.min(e.clientY + 16, innerHeight - h - 8) + 'px';
+});
+gEl.addEventListener('mouseleave', () => { $('#peek').style.display = 'none'; });
+gEl.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); setGraphZoom((lib.prefs.gZoom || 1) * (e.deltaY < 0 ? 1.1 : 0.9)); }, { passive: false });
+$('#gIn').onclick = () => setGraphZoom((lib.prefs.gZoom || 1) * 1.15);
+$('#gOut').onclick = () => setGraphZoom((lib.prefs.gZoom || 1) / 1.15);
+$('#gScope').onchange = e => { lib.prefs.gScope = e.target.value; scheduleSave(); renderGraph(); };
+$('#gDepth').onchange = e => { lib.prefs.gDepth = +e.target.value; scheduleSave(); renderGraph(); };
+$('#vBoard').onclick = () => setView('board');
+$('#vGraph').onclick = () => setView('graph');
+
+// ===================== Engine panel (UCI engines such as Lc0 or Stockfish) =====================
+// The engine runs in main.py; the page sends positions and polls the latest analysis.
+const Eng = { on: false, fen: null, timer: null, starting: false, loadedPath: null, pvs: [] };
+const engineFen = st => fenKey(st) + ' ' + st.half + ' ' + st.full;
+const fmtN = n => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'k' : String(n);
+
+function setTab(tab) {
+  if (lib.prefs.tab !== tab) { lib.prefs.tab = tab; scheduleSave(); }
+  for (const b of document.querySelectorAll('.ptab')) b.classList.toggle('on', b.dataset.tab === tab);
+  for (const el of document.querySelectorAll('[data-pane]')) el.hidden = el.dataset.pane !== tab;
+  for (const el of document.querySelectorAll('[data-for]')) el.hidden = el.dataset.for !== tab;
+}
+
+function renderEngineList() {
+  const sel = $('#engSel'), list = lib.prefs.engines || [];
+  sel.innerHTML = '';
+  list.forEach((e, i) => sel.append(new Option(e.name, i)));
+  sel.value = lib.prefs.engine || 0;
+  sel.hidden = $('#engRemove').hidden = !list.length;
+  $('#engGo').textContent = t(Eng.on ? 'eng_stop' : 'eng_analyze');
+  if (!Eng.on && !Eng.starting) engineMessage();
+}
+
+function engineMessage(msg) {
+  $('#engHead').innerHTML = '';
+  const box = $('#engLines');
+  box.innerHTML = '<div class="empty"></div>';
+  box.firstChild.textContent = msg || (!Backend.desktop ? t('eng_desktop_only') : (lib.prefs.engines || []).length ? t('eng_idle') : t('eng_none'));
+}
+
+async function startEngine(path) {
+  Eng.starting = true;
+  engineMessage(t('eng_starting', { name: fileName(path) }));
+  const res = await Backend.api.engine_start(path);
+  Eng.starting = false;
+  if (!res.ok) { Eng.loadedPath = null; engineMessage(t('eng_failed', { error: res.error })); return null; }
+  Eng.loadedPath = path;
+  return res;
+}
+
+async function addEngine() {
+  if (!Backend.desktop) { toast(t('eng_desktop_only')); return; }
+  const path = await Backend.api.engine_pick();
+  if (!path) return;
+  await toggleEngine(false);
+  const res = await startEngine(path);
+  if (!res) return;
+  const list = (lib.prefs.engines || []).filter(e => e.path !== path);
+  list.push({ name: res.name, path });
+  lib.prefs.engines = list;
+  lib.prefs.engine = list.length - 1;
+  scheduleSave();
+  toggleEngine(true);
+}
+
+function removeEngine() {
+  const list = lib.prefs.engines || [], i = lib.prefs.engine || 0;
+  if (!list[i] || !confirm(t('eng_remove_q', { name: list[i].name }))) return;
+  toggleEngine(false);
+  list.splice(i, 1);
+  lib.prefs.engine = 0;
+  scheduleSave();
+  renderEngineList();
+}
+
+async function toggleEngine(on = !Eng.on) {
+  if (!Backend.desktop) { toast(t('eng_desktop_only')); return; }
+  if (Eng.starting) return;
+  if (!on) {
+    Eng.on = false;
+    clearInterval(Eng.timer);
+    await Backend.api.engine_stop();
+    renderEngineList();
+    return;
+  }
+  const e = (lib.prefs.engines || [])[lib.prefs.engine || 0];
+  if (!e) { addEngine(); return; }
+  setTab('engine');
+  if (Eng.loadedPath !== e.path && !(await startEngine(e.path))) return;
+  Eng.on = true;
+  Eng.fen = null;
+  renderEngineList();
+  engineFollow();
+  clearInterval(Eng.timer);
+  Eng.timer = setInterval(pollEngine, 350);
+}
+
+// Called whenever the board changes: analyse the new position
+function engineFollow() {
+  if (!Eng.on || !cur) return;
+  const fen = engineFen(cur.st);
+  if (fen === Eng.fen) return;
+  Eng.fen = fen;
+  if (!legalMoves(cur.st).length) { Backend.api.engine_stop(); engineMessage(t('eng_game_over')); return; }
+  engineMessage(t('eng_thinking'));
+  Backend.api.engine_analyze(fen).then(r => { if (r !== true) engineMessage(t('eng_failed', { error: r })); });
+}
+
+async function pollEngine() {
+  if (!Eng.on) return;
+  const s = await Backend.api.engine_poll();
+  if (!Eng.on || s.fen !== Eng.fen) return;
+  if (!s.running) {
+    Eng.on = false; Eng.loadedPath = null;
+    clearInterval(Eng.timer);
+    renderEngineList();
+    engineMessage(t('eng_failed', { error: s.error || 'stopped' }));
+    return;
+  }
+  if (s.lines.length) renderEngine(s);
+}
+
+// UCI scores are from the side to move; Grandmist shows everything from White's point of view
+function scoreText(score, turn) {
+  let [kind, v] = score;
+  if (turn === 'b') v = -v;
+  return kind === 'mate' ? (v > 0 ? '#' : '#-') + Math.abs(v) : (v > 0 ? '+' : '') + (v / 100).toFixed(2);
+}
+
+function uciToMoves(st, uci, limit = 14) {
+  const out = [];
+  for (const u of uci.slice(0, limit)) {
+    const from = sqIdx(u.slice(0, 2)), to = sqIdx(u.slice(2, 4)), pr = u[4] || '';
+    const legal = legalMoves(st);
+    const m = legal.find(x => x.from === from && x.to === to && (x.promo || '') === pr);
+    if (!m) break;
+    out.push({ m, num: st.turn === 'w' ? st.full + '.' : out.length ? '' : st.full + '…', san: toSAN(st, m, legal) });
+    st = makeMove(st, m);
+  }
+  return out;
+}
+
+function renderEngine(s) {
+  const st = cur.st, top = s.lines[0];
+  const wdl = top.wdl && (st.turn === 'w' ? top.wdl : [top.wdl[2], top.wdl[1], top.wdl[0]]);
+  const pct = x => Math.round(x / 10);
+  let head = `<span class="eng-score">${scoreText(top.score, st.turn)}</span>`;
+  if (wdl) head += `<div class="bar eng-bar" title="${t('wdl_tip', { w: pct(wdl[0]), d: pct(wdl[1]), l: pct(wdl[2]) })}"><span class="w" style="width:${wdl[0] / 10}%"></span><span class="d" style="width:${wdl[1] / 10}%"></span><span class="l" style="width:${wdl[2] / 10}%"></span></div>`;
+  head += `<span class="eng-stats"></span>`;
+  $('#engHead').innerHTML = head;
+  $('#engHead .eng-stats').textContent = t('eng_stats', { d: top.depth || 0, nodes: fmtN(top.nodes || 0), nps: fmtN(top.nps || 0) }) + ' · ' + s.name;
+  Eng.pvs = s.lines.map(l => uciToMoves(st, l.pv));
+  $('#engLines').innerHTML = s.lines.map((l, i) =>
+    `<div class="eng-line"><span class="eng-ev">${scoreText(l.score, st.turn)}</span>` +
+    Eng.pvs[i].map((x, k) => `<span class="eng-mv" data-l="${i}" data-k="${k}">${x.num}${x.san}</span>`).join(' ') + '</div>').join('');
+}
+
+// Clicking a move in an engine line plays the line up to that move (adding it as a variation if needed)
+$('#engLines').addEventListener('click', e => {
+  const el = e.target.closest('.eng-mv');
+  if (!el) return;
+  const pv = Eng.pvs[+el.dataset.l];
+  for (let k = 0; k <= +el.dataset.k; k++) playMove(pv[k].m);
+});
+for (const b of document.querySelectorAll('.ptab')) b.onclick = () => setTab(b.dataset.tab);
+$('#engGo').onclick = () => toggleEngine();
+$('#engAdd').onclick = addEngine;
+$('#engRemove').onclick = removeEngine;
+$('#engSel').onchange = async e => {
+  lib.prefs.engine = +e.target.value;
+  scheduleSave();
+  if (Eng.on) { await toggleEngine(false); toggleEngine(true); }
+};
+
+// ===================== Import games from Lichess / Chess.com =====================
+// Both sites have free public APIs. All of a player's games become one new .gm file,
+// grouped by colour and opening so they can be explored in the tree view.
+const IO = { busy: false, cancel: false };
+const ioStatus = msg => { $('#ioStatus').textContent = msg; };
+
+async function getText(url, accept) {
+  if (Backend.desktop) {
+    const r = await Backend.api.fetch(url, accept);
+    if (!r.ok) throw Object.assign(new Error(r.error), { status: r.status });
+    return r.text;
+  }
+  const r = await fetch(url, { headers: { Accept: accept } });
+  if (!r.ok) throw Object.assign(new Error('HTTP ' + r.status), { status: r.status });
+  return r.text();
+}
+
+async function downloadGames(site, user, max) {
+  if (site === 'lichess') {
+    ioStatus(t('io_downloading'));
+    const q = new URLSearchParams({ opening: 'true', clocks: 'false', evals: 'false' });
+    if (max) q.set('max', max);
+    return splitPGN(await getText(`https://lichess.org/api/games/user/${encodeURIComponent(user)}?${q}`, 'application/x-chess-pgn'));
+  }
+  const base = `https://api.chess.com/pub/player/${encodeURIComponent(user.toLowerCase())}/games`;
+  const archives = JSON.parse(await getText(base + '/archives', 'application/json')).archives || [];
+  let games = [];
+  for (const url of archives.reverse()) { // newest month first
+    if (IO.cancel) break;
+    ioStatus(t('io_month', { month: url.split('/').slice(-2).join('-'), n: games.length }));
+    games = games.concat(splitPGN(await getText(url + '/pgn', 'application/x-chess-pgn')).reverse());
+    if (max && games.length >= max) break;
+  }
+  return max ? games.slice(0, max) : games;
+}
+
+// "Sicilian Defense: Najdorf Variation" (Lichess) or an ECOUrl slug (Chess.com) → "Sicilian Defense"
+function openingFamily(h) {
+  if (h.Opening) return h.Opening.split(':')[0].trim();
+  const m = (h.ECOUrl || '').match(/openings\/([^?#]+)/);
+  if (!m) return h.ECO || '';
+  const out = [];
+  for (const w of m[1].split('-')) {
+    if (/^\d/.test(w)) break;
+    out.push(w);
+    if (/^(Defense|Defence|Opening|Game|Gambit|Attack|System)$/.test(w)) break;
+  }
+  return out.join(' ');
+}
+
+async function importOnline() {
+  const site = $('#ioSite').value, user = $('#ioUser').value.trim(), max = +$('#ioMax').value;
+  if (!user || IO.busy || !confirmDiscard()) return;
+  Object.assign(lib.prefs, { ioSite: site, ioUser: user, ioMax: max });
+  scheduleSave();
+  IO.busy = true; IO.cancel = false;
+  $('#ioGo').disabled = true;
+  try {
+    const games = await downloadGames(site, user, max);
+    const records = [];
+    let skipped = 0;
+    for (let i = 0; i < games.length && !IO.cancel; i++) {
+      if (i % 20 === 0) { ioStatus(t('io_parsing', { i, n: games.length })); await new Promise(r => setTimeout(r)); }
+      if (/\[Variant "(?!Standard|From Position)/.test(games[i])) { skipped++; continue; } // e.g. Chess960
+      try {
+        const p = parseRecordPGN(games[i]), h = p.headers;
+        const asWhite = h.White.toLowerCase() === user.toLowerCase();
+        h.Category = t(asWhite ? 'as_white' : 'as_black') + '/' + (openingFamily(h) || t('uncategorized'));
+        records.push(makeRecord(p));
+      } catch (e) { skipped++; }
+    }
+    if (IO.cancel) return;
+    if (!records.length) { ioStatus(t('io_none', { user })); return; }
+    setDocument(records, null, `${user} (${site === 'lichess' ? 'Lichess' : 'Chess.com'})`, null);
+    markDirty();
+    $('#onlineDlg').close();
+    toast(t('imported', { n: records.length }) + (skipped ? ' · ' + t('io_skipped', { n: skipped }) : ''), 5000);
+  } catch (e) {
+    ioStatus(e.status === 404 ? t('io_not_found', { user }) : t('io_failed', { error: e.message }));
+  } finally {
+    IO.busy = false;
+    $('#ioGo').disabled = false;
+  }
+}
+
+function openOnlineDialog() {
+  $('#ioSite').value = lib.prefs.ioSite || 'lichess';
+  $('#ioUser').value = lib.prefs.ioUser || '';
+  $('#ioMax').value = lib.prefs.ioMax ?? 200;
+  ioStatus('');
+  $('#onlineDlg').showModal();
+  $('#ioUser').focus();
+}
+$('#ioGo').onclick = importOnline;
+$('#ioUser').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); importOnline(); } });
+$('#onlineDlg').addEventListener('close', () => { if (IO.busy) IO.cancel = true; });
+
+// ===================== Startup =====================
+const SAMPLE = `[Title "Sample: Italian Game"]
+[Category "Openings/Open Games"]
+
+{A sample record. Click a move to jump to that position; go back and play a different move to add a variation; right-click a move to promote or delete it.}
+1. e4 e5 2. Nf3 Nc6 3. Bc4 {The Italian Game: the bishop eyes the weak f7 square.} Bc5 (3... Nf6 {Two Knights Defence, sharper.} 4. Ng5 d5 5. exd5 Na5 (5... Nxd5?! 6. Nxf7 {Fried Liver Attack}) 6. Bb5+) 4. c3 {Preparing d4 to take the centre.} Nf6 5. d4 exd4 6. cxd4 Bb4+ 7. Bd2 (7. Nc3 {Towards the Moller Attack}) 7... Bxd2+ 8. Nbxd2 d5 *`;
+
+(async function init() {
+  await Backend.init();
+  lib.prefs = (await Backend.loadSettings()).prefs || {};
+  Backend.core = await Backend.coreInfo();
+  await loadLanguages();
+  setLanguage(lib.prefs.lang || 'en');
+  $('#treeVars').checked = lib.prefs.treeVars !== false;
+  $('#treeScope').value = lib.prefs.treeScope || 'all';
+  $('#gDepth').value = lib.prefs.gDepth || 10;
+  $('#gScope').value = lib.prefs.gScope || 'record';
+  setTab(lib.prefs.tab || 'engine');
+  renderEngineList();
+  setView(lib.prefs.view || 'board');
+  applyScale();
+  // 1) a .gm file double-clicked in Explorer, 2) the library from v1.1.0, 3) the last file, 4) a new file
+  const s = await Backend.startup();
+  let opened = false;
+  if (s.file) opened = await openPath(s.file);
+  if (!opened && s.legacy) {
+    opened = openText(s.legacy, null, t('my_library') + '.gm');
+    if (opened) { markDirty(); toast(t('legacy_open'), 8000); }
+  }
+  if (!opened && lib.prefs.recent && lib.prefs.recent[0]) opened = await openPath(lib.prefs.recent[0], true);
+  if (!opened) {
+    setDocument(lib.prefs.seenSample ? [] : [makeRecord(parseRecordPGN(SAMPLE))], null, t('untitled'), null);
+    lib.prefs.seenSample = true;
+    scheduleSave();
+  }
+})();
+</script>
+</body>
+</html>
