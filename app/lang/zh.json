@@ -238,8 +238,7 @@
   "v_only_move": "唯一着法",
   "v_strong": "好棋",
   "rv_chances": "胜率 {a}% → {b}%",
-  "rv_found": "{r} 分棋手中有 {p}% 能找到最佳着法",
-  "rv_engine": "引擎",
   "rv_src_ai": "讲解由 AI 撰写。",
-  "rv_src_rules": "离线讲解（未连接 AI 服务器）。"
+  "rv_src_rules": "离线讲解（未连接 AI 服务器）。",
+  "rv_opening": "开局"
 }

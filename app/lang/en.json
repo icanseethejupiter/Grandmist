@@ -248,8 +248,7 @@
   "v_only_move": "Only move",
   "v_strong": "Strong move",
   "rv_chances": "Winning chances {a}% → {b}%",
-  "rv_found": "best move found by {p}% of {r} players",
-  "rv_engine": "Engine",
   "rv_src_ai": "Explanations written by AI.",
-  "rv_src_rules": "Offline explanations (AI server not connected)."
+  "rv_src_rules": "Offline explanations (AI server not connected).",
+  "rv_opening": "Opening"
 }

@@ -184,6 +184,7 @@
   #rvLevel { font-size: 12px; padding: 2px 4px; }
   body.tab-review .tree-panel { height: 58%; }
   .rv-card { border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 6px; padding: 8px 10px; margin: 6px 0; background: var(--panel); }
+  .rv-card.v-opening { border-left-color: var(--cmt); }
   .rv-card.v-blunder { border-left-color: #ff5c6c; } .rv-card.v-mistake { border-left-color: #ff9f43; } .rv-card.v-inaccuracy { border-left-color: #f5d547; }
   .rv-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
   .rv-move { font: 700 14px var(--mono); cursor: pointer; } .rv-move:hover { color: var(--accent); }
@@ -2161,6 +2162,11 @@ function renderReview() {
   if (!v) { reviewMessage(rec._review ? t('rv_stale') : t('rv_intro')); return; }
   box.innerHTML = '';
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  if (v.data.opening_text) {
+    const card = mk('div', 'rv-card v-opening');
+    card.append(mk('div', 'rv-head', t('rv_opening')), mk('div', 'rv-text', v.data.opening_text));
+    box.append(card);
+  }
   if (!v.data.key_moments.length) box.append(mk('div', 'empty', t('rv_none')));
   for (const m of v.data.key_moments) {
     const card = mk('div', 'rv-card v-' + m.verdict);
@@ -2170,10 +2176,8 @@ function renderReview() {
     head.append(mv, mk('span', 'rv-badge', t('v_' + m.verdict)));
     card.append(head);
     if (m.comment) card.append(mk('div', 'rv-text', m.comment));
-    const curve = Object.entries(m.human_chance_by_rating_pct || {}).map(([r, x]) => `${r}: ${x.best}%`).join(' · ');
-    card.append(mk('div', 'rv-stats', t('rv_chances', { a: m.expected_score_before_pct, b: m.expected_score_after_pct }) + ' · ' +
-      t('rv_found', { p: m.human_chance_to_play_best_pct, r: v.data.model_rating }) + (curve ? ' (' + curve + ')' : '')));
-    card.append(mk('div', 'rv-stats', t('rv_engine') + ': ' + m.engine_line));
+    if (['blunder', 'mistake', 'inaccuracy'].includes(m.verdict))
+      card.append(mk('div', 'rv-stats', t('rv_chances', { a: m.winning_chance_before_pct, b: m.winning_chance_after_pct })));
     if (m.takeaway) card.append(mk('div', 'rv-take', '💡 ' + m.takeaway));
     box.append(card);
   }
