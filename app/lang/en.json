@@ -250,5 +250,10 @@
   "rv_chances": "Winning chances {a}% → {b}%",
   "rv_src_ai": "Explanations written by AI.",
   "rv_src_rules": "Offline explanations (AI server not connected).",
-  "rv_opening": "Opening"
+  "rv_opening": "Opening",
+  "v_allows_mate": "Allows mate",
+  "rv_advanced": "Advanced",
+  "rv_advanced_tip": "Show the numbers behind each explanation",
+  "rv_human": "Players of this level: played move {a}%, best move {b}%",
+  "rv_instinct": "Engine's first instinct for the best move: {a}%"
 }

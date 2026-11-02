@@ -185,16 +185,18 @@
   body.tab-review .tree-panel { height: 58%; }
   .rv-card { border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 6px; padding: 8px 10px; margin: 6px 0; background: var(--panel); }
   .rv-card.v-opening { border-left-color: var(--cmt); }
-  .rv-card.v-blunder { border-left-color: #ff5c6c; } .rv-card.v-mistake { border-left-color: #ff9f43; } .rv-card.v-inaccuracy { border-left-color: #f5d547; }
+  .rv-card.v-blunder, .rv-card.v-allows_mate { border-left-color: #ff5c6c; } .rv-card.v-mistake { border-left-color: #ff9f43; } .rv-card.v-inaccuracy { border-left-color: #f5d547; }
   .rv-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
   .rv-move { font: 700 14px var(--mono); cursor: pointer; } .rv-move:hover { color: var(--accent); }
   .rv-badge { font-size: 11px; padding: 1px 6px; border-radius: 10px; background: var(--hover); color: var(--muted); }
   .rv-text { font-size: 13px; line-height: 1.5; margin: 2px 0 4px; }
   .rv-stats { font: 11px var(--mono); color: var(--muted); margin: 2px 0; }
+  .rv-context { font-size: 12px; color: var(--muted); font-style: italic; margin: 2px 0; }
+  .rv-adv { font: 11px var(--mono); color: var(--muted); margin: 4px 0 2px; padding-top: 4px; border-top: 1px dashed var(--border); white-space: pre-wrap; }
   .rv-take { font-size: 12px; color: var(--cmt); margin-top: 4px; }
   .rv-src { margin: 4px 0 8px; }
   .mv.km::after { content: "●"; font-size: 9px; margin-left: 2px; vertical-align: super; color: var(--accent); }
-  .mv.km-blunder::after { color: #ff5c6c; } .mv.km-mistake::after { color: #ff9f43; } .mv.km-inaccuracy::after { color: #f5d547; }
+  .mv.km-blunder::after, .mv.km-allows_mate::after { color: #ff5c6c; } .mv.km-mistake::after { color: #ff9f43; } .mv.km-inaccuracy::after { color: #f5d547; }
   .io-grid { display: grid; grid-template-columns: 1fr 1.6fr .8fr; gap: 10px; margin: 12px 0 8px; min-width: min(520px, 80vw); }
   .io-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
   #ioStatus { min-height: 18px; margin-bottom: 8px; font-family: var(--mono); }
@@ -323,7 +325,7 @@
         <select id="engSel"></select><button id="engAdd" class="small-btn" data-i18n-title="eng_add">+</button><button id="engRemove" class="small-btn" data-i18n-title="eng_remove">−</button><button id="engGo" class="small-btn primary">▶</button>
       </span>
       <span class="tab-tools" data-for="review" hidden>
-        <select id="rvLevel" data-i18n-title="rv_level_tip"></select><button id="rvGo" class="small-btn primary" data-i18n="rv_go">Review game</button>
+        <label data-i18n-title="rv_advanced_tip"><input type="checkbox" id="rvAdv"> <span data-i18n="rv_advanced">Advanced</span></label><select id="rvLevel" data-i18n-title="rv_level_tip"></select><button id="rvGo" class="small-btn primary" data-i18n="rv_go">Review game</button>
       </span>
       <span class="tab-tools" data-for="tree" hidden>
         <label><input type="checkbox" id="treeVars"> <span data-i18n="include_vars">Include variations</span></label>
@@ -2131,6 +2133,7 @@ function renderReviewTab() {
   const sel = $('#rvLevel');
   if (!sel.options.length) for (let r = 1100; r <= 1900; r += 100) sel.append(new Option(r, r));
   sel.value = lib.prefs.rvLevel || 1500;
+  $('#rvAdv').checked = !!lib.prefs.rvAdv;
   renderReview();
 }
 
@@ -2176,13 +2179,24 @@ function renderReview() {
     head.append(mv, mk('span', 'rv-badge', t('v_' + m.verdict)));
     card.append(head);
     if (m.comment) card.append(mk('div', 'rv-text', m.comment));
-    if (['blunder', 'mistake', 'inaccuracy'].includes(m.verdict))
-      card.append(mk('div', 'rv-stats', t('rv_chances', { a: m.winning_chance_before_pct, b: m.winning_chance_after_pct })));
+    if (m.context) card.append(mk('div', 'rv-context', m.context));
     if (m.takeaway) card.append(mk('div', 'rv-take', '💡 ' + m.takeaway));
+    if (lib.prefs.rvAdv && m.advanced) card.append(mk('div', 'rv-adv', reviewNumbers(m.advanced)));
     box.append(card);
   }
   box.append(mk('div', 'hint rv-src', t(v.data.explanation_source === 'ai' ? 'rv_src_ai' : 'rv_src_rules')));
 }
+
+// Advanced view: the numbers behind an explanation (hidden by default)
+function reviewNumbers(a) {
+  const lines = [];
+  if (a.winning_chance_before_pct != null) lines.push(t('rv_chances', { a: a.winning_chance_before_pct, b: a.winning_chance_after_pct }));
+  if (a.human_prob_played_pct != null) lines.push(t('rv_human', { a: a.human_prob_played_pct, b: a.human_prob_best_pct }));
+  if (a.engine_instinct_best_pct != null) lines.push(t('rv_instinct', { a: a.engine_instinct_best_pct }));
+  for (const [k, v] of Object.entries(a.checklist || {})) lines.push(k + ': ' + v);
+  return lines.join('\n');
+}
+$('#rvAdv').addEventListener('change', e => { lib.prefs.rvAdv = e.target.checked; scheduleSave(); renderReview(); });
 
 async function startReview() {
   if (RV.busy || !rec || !reviewAvailable()) return;

@@ -240,5 +240,10 @@
   "rv_chances": "胜率 {a}% → {b}%",
   "rv_src_ai": "讲解由 AI 撰写。",
   "rv_src_rules": "离线讲解（未连接 AI 服务器）。",
-  "rv_opening": "开局"
+  "rv_opening": "开局",
+  "v_allows_mate": "被将杀",
+  "rv_advanced": "高级",
+  "rv_advanced_tip": "显示每条讲解背后的数字",
+  "rv_human": "该等级棋手：走出这步 {a}%，走出最佳着法 {b}%",
+  "rv_instinct": "引擎第一直觉选最佳着法的概率：{a}%"
 }
