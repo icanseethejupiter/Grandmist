@@ -195,6 +195,7 @@
   .rv-adv { font: 11px var(--mono); color: var(--muted); margin: 4px 0 2px; padding-top: 4px; border-top: 1px dashed var(--border); white-space: pre-wrap; }
   .rv-take { font-size: 12px; color: var(--cmt); margin-top: 4px; }
   .rv-src { margin: 4px 0 8px; }
+  .rv-tree { margin: 6px 0 2px; }
   .mv.km::after { content: "●"; font-size: 9px; margin-left: 2px; vertical-align: super; color: var(--accent); }
   .mv.km-blunder::after, .mv.km-allows_mate::after { color: #ff5c6c; } .mv.km-mistake::after { color: #ff9f43; } .mv.km-inaccuracy::after { color: #f5d547; }
   .io-grid { display: grid; grid-template-columns: 1fr 1.6fr .8fr; gap: 10px; margin: 12px 0 8px; min-width: min(520px, 80vw); }
@@ -2184,7 +2185,34 @@ function renderReview() {
     if (lib.prefs.rvAdv && m.advanced) card.append(mk('div', 'rv-adv', reviewNumbers(m.advanced)));
     box.append(card);
   }
-  box.append(mk('div', 'hint rv-src', t(v.data.explanation_source === 'ai' ? 'rv_src_ai' : 'rv_src_rules')));
+  const add = mk('button', 'small-btn rv-tree', t('rv_to_tree'));
+  add.title = t('rv_to_tree_tip');
+  add.onclick = () => { applyReview(v); toast(t('rv_tree_done')); };
+  box.append(add, mk('div', 'hint rv-src', t(v.data.explanation_source === 'ai' ? 'rv_src_ai' : 'rv_src_rules')));
+}
+
+// Write a review into the record: notes on the played moves, better lines as variations (the main line stays first)
+function applyReview(v) {
+  const note = (node, text) => {
+    text = (text || '').replace(/[{}]/g, '').trim();
+    if (text && !node.comment.includes(text)) node.comment = (node.comment ? node.comment + ' ' : '') + text;
+  };
+  for (const n of v.data.tree_notes || []) if (v.nodes[n.ply - 1]) note(v.nodes[n.ply - 1], n.text);
+  for (const m of v.data.key_moments) {
+    const node = v.nodes[m.ply - 1];
+    if (!node) continue;
+    if (m.nag && !node.nags.some(x => x <= 9)) node.nags.push(m.nag);
+    note(node, [m.comment, m.context].filter(Boolean).join(' '));
+    let at = node.parent, first = null;
+    for (const san of m.better_line || []) {
+      const f = findMoveBySAN(at.st, san);
+      if (!f) break;
+      at = addChild(at, f.m, f.legal);
+      first = first || at;
+    }
+    if (first && m.takeaway) note(first, '💡 ' + m.takeaway);
+  }
+  touch(); renderAll();
 }
 
 // Advanced view: the numbers behind an explanation (hidden by default)

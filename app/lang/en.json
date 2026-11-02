@@ -255,5 +255,8 @@
   "rv_advanced": "Advanced",
   "rv_advanced_tip": "Show the numbers behind each explanation",
   "rv_human": "Players of this level: played move {a}%, best move {b}%",
-  "rv_instinct": "Engine's first instinct for the best move: {a}%"
+  "rv_instinct": "Engine's first instinct for the best move: {a}%",
+  "rv_to_tree": "Add to game tree",
+  "rv_to_tree_tip": "Write the review into this record: notes on the moves and the better lines as variations",
+  "rv_tree_done": "Review added to the game tree"
 }
