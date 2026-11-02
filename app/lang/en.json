@@ -259,5 +259,15 @@
   "rv_to_tree": "Add to game tree",
   "rv_to_tree_tip": "Write the review into this record: notes on the moves and the better lines as variations",
   "rv_tree_done": "Review added to the game tree",
-  "rv_summary": "Summary"
+  "rv_summary": "Summary",
+  "risk_trap": "Trap",
+  "risk_calc": "Needs calculation",
+  "risk_feel": "Findable by feel",
+  "risk_tip": "How often players of this level go wrong in this position (experimental)",
+  "rv_risk": "Mistake risk at this level: {a}% (experimental signal)",
+  "risk_mark": "Danger zone: players of this level often go wrong here",
+  "rv_think": "Think first",
+  "rv_think_tip": "Hide the answer and go to the position before the move",
+  "rv_think_q": "What would you play here? Think it through, then show the answer.",
+  "rv_show": "Show answer"
 }

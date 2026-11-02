@@ -198,6 +198,11 @@
   .rv-tree { margin: 6px 0 2px; }
   .mv.km::after { content: "●"; font-size: 9px; margin-left: 2px; vertical-align: super; color: var(--accent); }
   .mv.km-blunder::after, .mv.km-allows_mate::after { color: #ff5c6c; } .mv.km-mistake::after { color: #ff9f43; } .mv.km-inaccuracy::after { color: #f5d547; }
+  .g-node.risk rect { stroke: #ff7a45; stroke-width: 2.5px; }
+  .mv.risk { box-shadow: inset 0 -2px 0 #ff7a45; border-radius: 3px; } .mv.risk:not(.cur) { background: rgba(255, 122, 69, .14); }
+  .rv-risk { font-size: 11px; padding: 1px 6px; border-radius: 10px; border: 1px solid var(--border); color: var(--muted); }
+  .rv-risk.risk-trap { border-color: #ff7a45; color: #ff7a45; } .rv-risk.risk-calc { border-color: #f5a623; color: #f5a623; }
+  .rv-think { margin-top: 4px; }
   .io-grid { display: grid; grid-template-columns: 1fr 1.6fr .8fr; gap: 10px; margin: 12px 0 8px; min-width: min(520px, 80vw); }
   .io-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
   #ioStatus { min-height: 18px; margin-bottom: 8px; font-family: var(--mono); }
@@ -1130,8 +1135,9 @@ function renderNotation() {
     const num = ps.turn === 'w' ? ps.full + '. ' : force ? ps.full + '… ' : '';
     const moveNags = node.nags.filter(n => n <= 9).map(n => NAG_TEXT[n] || '').join('');
     const posNags = node.nags.filter(n => n > 9).map(n => NAG_TEXT[n] || '').join(' ');
-    const verdict = reviewVerdict(node);
-    const sp = mk('span', 'mv' + (main ? ' main' : '') + (node === cur ? ' cur' : '') + (verdict ? ' km km-' + verdict : ''), num + node.san + moveNags + (posNags ? ' ' + posNags : ''));
+    const verdict = reviewVerdict(node), danger = reviewRisk(node);
+    const sp = mk('span', 'mv' + (main ? ' main' : '') + (node === cur ? ' cur' : '') + (verdict ? ' km km-' + verdict : '') + (danger ? ' risk' : ''), num + node.san + moveNags + (posNags ? ' ' + posNags : ''));
+    if (danger) sp.title = t('risk_mark');
     sp._node = node;
     if (node === cur) curEl = sp;
     container.append(sp, ' ');
@@ -1803,9 +1809,10 @@ function renderGraph() {
     svg += `<path class="g-link${onPath.has(b) ? ' on' : ''}" stroke-width="${w.toFixed(2)}" d="M${x1},${y1}C${mx},${y1} ${mx},${y2} ${x2},${y2}"/>`;
   }
   nodes.forEach((n, i) => {
+    const danger = (!n.refRec || n.refRec === rec) && reviewRisk(n.ref || n);
     const cls = 'g-node' + (n.parent ? (n.parent.st.turn === 'w' ? ' w' : ' b') : '') + (n._gm ? ' main' : '') +
-      (onPath.has(n) ? ' on' : '') + (n === curNode ? ' cur' : '');
-    svg += `<g class="${cls}" data-i="${i}" transform="translate(${X(n)},${Y(n)})"><rect width="${NW}" height="${NH}" rx="${3 * z}"/>` +
+      (onPath.has(n) ? ' on' : '') + (n === curNode ? ' cur' : '') + (danger ? ' risk' : '');
+    svg += `<g class="${cls}" data-i="${i}" transform="translate(${X(n)},${Y(n)})">${danger ? `<title>${t('risk_mark')}</title>` : ''}<rect width="${NW}" height="${NH}" rx="${3 * z}"/>` +
       `<text x="${NW / 2}" y="${NH / 2}" font-size="${fs}" text-anchor="middle" dominant-baseline="central">${graphLabel(n)}</text>`;
     if ((n.ref || n).comment) svg += `<circle class="g-dot" cx="${NW - 3 * z}" cy="${3 * z}" r="${2.5 * z}"/>`; // has a comment
     if (n._gh) svg += `<text class="g-more" x="${NW + 4 * z}" y="${NH / 2}" font-size="${fs * .85}" dominant-baseline="central">+${n._gh}</text>`;
@@ -2125,7 +2132,7 @@ $('#ioUser').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preve
 $('#onlineDlg').addEventListener('close', () => { if (IO.busy) IO.cancel = true; });
 
 // ===================== Game review (only when the optional core is installed) =====================
-const RV = { busy: false };
+const RV = { busy: false, think: new Set() };
 const reviewAvailable = () => !!(Backend.core && Backend.core.available && (Backend.core.capabilities || []).includes('review'));
 function mainlineNodes(r) { const out = []; let n = r.root; while (n.children.length) { n = n.children[0]; out.push(n); } return out; }
 
@@ -2159,6 +2166,14 @@ function reviewVerdict(node) {
   return m ? m.verdict : null;
 }
 
+// Danger zone: a move played in a position where players of this level often go wrong (from the review)
+function reviewRisk(node) {
+  const v = reviewOf(rec);
+  if (!v || !v.data.risk_marks) return false;
+  const i = v.nodes.indexOf(node);
+  return i >= 0 && v.data.risk_marks.some(k => k.ply === i + 1);
+}
+
 function renderReview() {
   if (!reviewAvailable() || !rec) return;
   if (RV.busy) return;
@@ -2183,11 +2198,28 @@ function renderReview() {
     const mv = mk('span', 'rv-move', m.move);
     mv.onclick = () => { setView('board'); goTo(v.nodes[m.ply - 1]); };
     head.append(mv, mk('span', 'rv-badge', t('v_' + m.verdict)));
+    const label = m.risk && m.risk.label;
+    if (label) { const b = mk('span', 'rv-risk risk-' + label, t('risk_' + label)); b.title = t('risk_tip'); head.append(b); }
     card.append(head);
+    const node = v.nodes[m.ply - 1], tk = rec.id + ':' + m.ply;
+    if (RV.think.has(tk)) {  // practice: the answer stays hidden until asked for
+      card.append(mk('div', 'rv-text', t('rv_think_q')));
+      const show = mk('button', 'small-btn rv-think', t('rv_show'));
+      show.onclick = () => { RV.think.delete(tk); goTo(node); renderReview(); };
+      card.append(show);
+      box.append(card);
+      continue;
+    }
     if (m.comment) card.append(mk('div', 'rv-text', m.comment));
     if (m.context) card.append(mk('div', 'rv-context', m.context));
     if (m.takeaway) card.append(mk('div', 'rv-take', '💡 ' + m.takeaway));
     if (lib.prefs.rvAdv && m.advanced) card.append(mk('div', 'rv-adv', reviewNumbers(m.advanced)));
+    if ((label === 'trap' || label === 'calc') && node) {
+      const think = mk('button', 'small-btn rv-think', t('rv_think'));
+      think.title = t('rv_think_tip');
+      think.onclick = () => { RV.think.add(tk); setView('board'); goTo(node.parent); renderReview(); };
+      card.append(think);
+    }
     box.append(card);
   }
   const add = mk('button', 'small-btn rv-tree', t('rv_to_tree'));
@@ -2226,6 +2258,7 @@ function reviewNumbers(a) {
   if (a.winning_chance_before_pct != null) lines.push(t('rv_chances', { a: a.winning_chance_before_pct, b: a.winning_chance_after_pct }));
   if (a.human_prob_played_pct != null) lines.push(t('rv_human', { a: a.human_prob_played_pct, b: a.human_prob_best_pct }));
   if (a.engine_instinct_best_pct != null) lines.push(t('rv_instinct', { a: a.engine_instinct_best_pct }));
+  if (a.mistake_risk_pct != null) lines.push(t('rv_risk', { a: a.mistake_risk_pct }));
   for (const [k, v] of Object.entries(a.checklist || {})) lines.push(k + ': ' + v);
   return lines.join('\n');
 }
