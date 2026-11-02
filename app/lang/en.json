@@ -258,5 +258,6 @@
   "rv_instinct": "Engine's first instinct for the best move: {a}%",
   "rv_to_tree": "Add to game tree",
   "rv_to_tree_tip": "Write the review into this record: notes on the moves and the better lines as variations",
-  "rv_tree_done": "Review added to the game tree"
+  "rv_tree_done": "Review added to the game tree",
+  "rv_summary": "Summary"
 }

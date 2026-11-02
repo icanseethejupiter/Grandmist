@@ -184,7 +184,7 @@
   #rvLevel { font-size: 12px; padding: 2px 4px; }
   body.tab-review .tree-panel { height: 58%; }
   .rv-card { border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 6px; padding: 8px 10px; margin: 6px 0; background: var(--panel); }
-  .rv-card.v-opening { border-left-color: var(--cmt); }
+  .rv-card.v-opening, .rv-card.v-summary { border-left-color: var(--cmt); }
   .rv-card.v-blunder, .rv-card.v-allows_mate { border-left-color: #ff5c6c; } .rv-card.v-mistake { border-left-color: #ff9f43; } .rv-card.v-inaccuracy { border-left-color: #f5d547; }
   .rv-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
   .rv-move { font: 700 14px var(--mono); cursor: pointer; } .rv-move:hover { color: var(--accent); }
@@ -2169,6 +2169,11 @@ function renderReview() {
   if (v.data.opening_text) {
     const card = mk('div', 'rv-card v-opening');
     card.append(mk('div', 'rv-head', t('rv_opening')), mk('div', 'rv-text', v.data.opening_text));
+    box.append(card);
+  }
+  if (v.data.summary_text) {
+    const card = mk('div', 'rv-card v-summary');
+    card.append(mk('div', 'rv-head', t('rv_summary')), mk('div', 'rv-text', v.data.summary_text));
     box.append(card);
   }
   if (!v.data.key_moments.length) box.append(mk('div', 'empty', t('rv_none')));
